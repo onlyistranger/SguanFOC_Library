@@ -18,6 +18,7 @@ SguanFOC_Library/commit/
 ├── 📖 foc_code_analysis.md          (系统架构与核心算法全景深度解析)
 ├── 🔬 source_code_function_guide.md (核心源码函数级逐行深度解析教学指南)
 ├── 💻 code_walkthrough.html         (源码逐行双屏联动交互剖析工作台)
+├── 🎯 dual_motor_gimbal_guide.md    (单 MCU 双电机二维云台实战开发指南)
 ├── 🛠️ beginner_sbs_guide.md         (初学者手把手实操与源码调试指南)
 ├── 📝 walkthrough.md                (本篇：教学中心导航与学习路线图)
 ├── ⚙️ build_docs.bat                (一键 Pandoc HTML 网页构建脚本)
@@ -25,13 +26,14 @@ SguanFOC_Library/commit/
 └── 🌐 html_docs/                    (纯本地离线交互式 HTML 教学网站输出目录)
 ```
 
-### 5 大核心教学文件职责定位
+### 6 大核心教学文件职责定位
 
 | 文档名称 | 核心内容与教学定位 | 适合阅读阶段 | 对应网页版 |
 | :--- | :--- | :---: | :---: |
 | [**`foc_code_analysis.md`**](foc_code_analysis.md) | **架构与算法全景深度解析**：FOC 物理本质、Clarke/Park 变换推导、SVPWM 七段式空间矢量调制原理、Tustin 双线性离散化引擎公式、PID/LADRC/SMC/DPCC 控制算法、全速域无感观测器全家桶 (SMO/NLFO/VCFO/HFI/EKF)、数字滤波器族及 196 项有限状态机原理。 | **第一阶段：建立全景理论认知** | [📖 网页精读](html_docs/foc_code_analysis.html) |
 | [**`source_code_function_guide.md`**](source_code_function_guide.md) | **核心源码函数级逐行深度解析**：跳过模糊概念，全面覆盖库中**每一个文件、每一个结构体、每一个函数**。详细剖析入参出参、数学实现逻辑、调用链、优化技巧与硬件避坑细节。 | **第二阶段：源码级精雕细琢** | [🔬 网页精读](html_docs/source_code_function_guide.html) |
 | [**`code_walkthrough.html`**](code_walkthrough.html) | **双屏联动源码精读工作台**：左侧原生代码高亮行号、右侧教学提示与数学推导卡片同步联动，支持动态 Bézier 曲线引导、字号缩放、双向跳转与 11 大核心文件矩阵切换。 | **第二阶段：双屏沉浸式研读** | [💻 交互工作台](html_docs/code_walkthrough.html) |
+| [**`dual_motor_gimbal_guide.md`**](dual_motor_gimbal_guide.md) | **单 MCU 双电机二维云台开发指南**：CH32V208 与 CH32V305 硬件特性选型对比、高级定时器与驱动芯片深度澄清、两轴三闭环控制链路、硬件拓扑与 SguanFOC 双电机代码配置落地。 | **第二阶段：多电机与工程实战** | [🎯 网页精读](html_docs/dual_motor_gimbal_guide.html) |
 | [**`beginner_sbs_guide.md`**](beginner_sbs_guide.md) | **初学者手把手实操指南**：嵌入式 C 语言与硬件定时器/ADC 注入触发心法、低侧采样避坑、8 个循序渐进的动手实战实验（从开环强拖、零位标定、电流闭环，到机械共振消除与串口自定义指令添加）以及常见疑难排查 (FAQ)。 | **第三阶段：动手实验与上机调试** | [🛠️ 网页精读](html_docs/beginner_sbs_guide.html) |
 | [**`walkthrough.md`**](walkthrough.md) | **教学中心导航与学习路线**：7 天渐进式学习路线图、模块架构速查表与一键构建指南。 | **全程查阅与规划指导** | [📝 网页精读](html_docs/walkthrough.html) |
 

@@ -55,7 +55,15 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [4/4] Converting walkthrough.md to HTML...
+echo [4/5] Converting dual_motor_gimbal_guide.md to HTML...
+pandoc -s -N --toc --toc-depth=3 --katex=assets/ -H header.html -B navbar.html -o "%OUTPUT_DIR%\dual_motor_gimbal_guide.html" dual_motor_gimbal_guide.md
+if errorlevel 1 (
+    echo [FAIL] Error converting dual_motor_gimbal_guide.md
+    pause
+    exit /b 1
+)
+
+echo [5/5] Converting walkthrough.md to HTML...
 pandoc -s -N --toc --toc-depth=3 --katex=assets/ -H header.html -B navbar.html -o "%OUTPUT_DIR%\walkthrough.html" walkthrough.md
 if errorlevel 1 (
     echo [FAIL] Error converting walkthrough.md
@@ -74,6 +82,7 @@ echo Output directory: %OUTPUT_DIR%
 echo Files:
 echo  - %OUTPUT_DIR%\index.html
 echo  - %OUTPUT_DIR%\code_walkthrough.html
+echo  - %OUTPUT_DIR%\dual_motor_gimbal_guide.html
 echo  - %OUTPUT_DIR%\foc_code_analysis.html
 echo  - %OUTPUT_DIR%\source_code_function_guide.html
 echo  - %OUTPUT_DIR%\beginner_sbs_guide.html
