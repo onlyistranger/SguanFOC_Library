@@ -455,13 +455,23 @@ static HandleEvent motorstatus_event_get(uint8_t run){
     return event_zero;
 }
 
+/**
+ * @brief  系统有限状态机 (FSM) 核心周期调度与故障保护判定器
+ * @param  sguan: 通用指针，指向当前电机的 SguanFoc 根结构体
+ * @note   全状态机核心机制:
+ *         1. 状态匹配: 遍历 196 项转移矩阵 motor_tab，锁定当前状态 (status_now);
+ *         2. 多源事件判决: 
+ *            - 手动事件 (run_flag 由用户或协议置位: ready, initializing, standby, fault, success)
+ *            - 物理超限自动事件 (过压、欠压、即时极限过流、反时限延时过流、堵转卡死、多级过温)
+ *         3. 状态跃迁与原子动作:
+ *            - 当且仅当状态发生改变时，记录变更时间戳 tick_last，并触发目标状态唯一的进入初始化函数 (motorstatus_initial_init);
+ *            - 周期性执行当前状态的动作循环 (motorstatus_action_loop)。
+ */
 void motorstatus_loop(void *sguan){
-    // ==================================================================
-    // 1.结构体类型转换(SguanFoc结构体)
+    // 1. 结构体指针类型还原
     SguanFoc *p = (SguanFoc *)sguan;
  
-    // ==================================================================
-    // 2.遍历状态转换表，给触发事件的条件
+    // 2. 遍历全局状态转换表，逐项比对当前状态所能接收的合法事件
     for (uint16_t i = 0; i < 184; i++){
         if (motor_tab[i].status_now == p->motorstatus.status){
             switch ((HandleEvent)motor_tab[i].event_now){

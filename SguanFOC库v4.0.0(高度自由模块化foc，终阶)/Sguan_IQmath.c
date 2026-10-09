@@ -13,13 +13,27 @@ static SguanF value_fabsf(SguanF x) {
 }
 
 // ================== 局部静态函数(Q31版本)=====================
+
+/**
+ * @brief  单精度浮点数转 Q31 定点数 (带基准标幺化与饱和保护)
+ * @param  f: 待转换的真实物理浮点数值 (如相电流 15.2A)
+ * @param  base_value: 该物理量的基准基值 (如电机额定最大电流 30.0A)
+ * @retval 32位有符号 Q31 定点数值 (范围: -2147483648 ~ 2147483647)
+ * @note   原理: 
+ *         1. 标幺化: normalized = f / base_value ∈ [-1.0, +1.0);
+ *         2. 定点缩放: scaled = normalized * 2^31 (即 2147483648.0);
+ *         3. 舍入保护: +0.5 / -0.5 四舍五入后转 64 位整数，最后做饱和钳位。
+ */
 static Q31 iqmath_q31_from_float(SguanF f, SguanF base_value){
     double scaled;
+    // 1. 非法输入检测: 基准值必须大于0，且浮点数非 NaN
     if (base_value <= 0.0f || f != f){ 
         return 0;
     }
     else if(base_value != 1.0f){
+        // 2. 标幺化计算
         float normalized = f / base_value;
+        // 边界硬饱和截断
         if (normalized >= 1.0f){
             return Q31_MAX;
         } else if (normalized <= -1.0f){
@@ -28,15 +42,18 @@ static Q31 iqmath_q31_from_float(SguanF f, SguanF base_value){
         scaled = (double)normalized * 2147483648.0;
     }
     else{
+        // 3. 基准为 1.0 时直接定点缩放
         scaled = (double)f * 2147483648.0;
     }
 
+    // 4. 四舍五入修正
     if (scaled >= 0.0){
         scaled += 0.5;
     } else{
         scaled -= 0.5;
     }
 
+    // 5. 溢出钳位至 Q31 边界
     int64_t result = (int64_t)scaled;
     if (result > Q31_MAX_64){
         return Q31_MAX;
@@ -46,20 +63,36 @@ static Q31 iqmath_q31_from_float(SguanF f, SguanF base_value){
     return (Q31)result;
 }
 
+/**
+ * @brief  Q31 定点数反标幺还原为真实单精度浮点数
+ * @param  q: 32位 Q31 定点数值
+ * @param  base_value: 对应的物理基准值 (如 30.0A)
+ * @retval 还原后的物理浮点数值 (单位与 base_value 一致)
+ */
 static SguanF iqmath_q31_to_float(Q31 q, SguanF base_value){
     if (base_value <= 0.0f){
         return 0.0f;
     }
 
-    double normalized = (double)q * (1.0/2147483648.0);
+    // 归一化: normalized = q / (2^31)
+    double normalized = (double)q * (1.0 / 2147483648.0);
+    // 乘回基值
     return (SguanF)(normalized * base_value);
 }
 
+/**
+ * @brief  Q31 定点饱和加法 (防止溢出反转导致电机飞车)
+ * @param  a: 加数 (Q31)
+ * @param  b: 被加数 (Q31)
+ * @retval 饱和和值 (Q31)
+ */
 static Q31 iqmath_q31_add(Q31 a, Q31 b){
     int32_t sum = a + b;
+    // 正溢出检测: 两个正数相加结果变负，说明溢出，钳位至最大正数
     if ((a > 0) && (b > 0) && (sum <= 0)){
         return Q31_MAX;
     }
+    // 负溢出检测: 两个负数相加结果变正，钳位至最小负数
     if ((a < 0) && (b < 0) && (sum >= 0)){
         return Q31_MIN;
     }

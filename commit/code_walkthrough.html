@@ -1,0 +1,1866 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SguanFOC v4.0.0 核心源码逐行剖析交互教学工作台 | 双屏联动精读</title>
+  
+  <!-- Offline KaTeX for Mathematical Formulas -->
+  <link rel="stylesheet" href="assets/katex.min.css">
+  <script src="assets/katex.min.js"></script>
+  <script src="assets/auto-render.min.js"></script>
+
+  <!-- Pre-bundled Data of 11 Core Files & Deep Annotations -->
+  <script src="walkthrough_data.js"></script>
+
+  <style>
+    :root {
+      --font-code: "JetBrains Mono", "Fira Code", SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      
+      /* Light Theme (Default) */
+      --bg-app: #f6f8fa;
+      --bg-panel: #ffffff;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f6f8fa;
+      --bg-subtle: #eaeef2;
+      --bg-code: #f8fafc;
+      --bg-active-line: rgba(9, 105, 218, 0.08);
+      --border-color: #d0d7de;
+      --border-subtle: #e1e4e8;
+      --border-highlight: #0969da;
+      
+      --text-main: #1f2328;
+      --text-muted: #57606a;
+      --text-dim: #8c959f;
+      
+      --accent-blue: #0969da;
+      --accent-cyan: #059669;
+      --accent-green: #1a7f37;
+      --accent-purple: #8250df;
+      --accent-amber: #9a6700;
+      --accent-red: #cf222e;
+      --accent-pink: #bf3989;
+      
+      /* Syntax Highlighting (Light) */
+      --syntax-keyword: #cf222e;
+      --syntax-type: #0550ae;
+      --syntax-func: #8250df;
+      --syntax-string: #0a3069;
+      --syntax-number: #0550ae;
+      --syntax-comment: #6e7781;
+      --syntax-macro: #953800;
+      --syntax-asm: #b35900;
+      --syntax-operator: #24292f;
+      
+      --gutter-width: 58px;
+      --marker-gutter-width: 22px;
+      --code-font-size: 13px;
+    }
+
+    [data-theme="dark"] {
+      --bg-app: #090d16;
+      --bg-panel: #0d1117;
+      --bg-card: #161b22;
+      --bg-card-hover: #1c2128;
+      --bg-subtle: #21262d;
+      --bg-code: #0b0f17;
+      --bg-active-line: rgba(56, 139, 253, 0.15);
+      --border-color: #30363d;
+      --border-subtle: #21262d;
+      --border-highlight: #58a6ff;
+      
+      --text-main: #e6edf3;
+      --text-muted: #8b949e;
+      --text-dim: #6e7681;
+      
+      --accent-blue: #58a6ff;
+      --accent-cyan: #39c5cf;
+      --accent-green: #3fb950;
+      --accent-purple: #bc8cff;
+      --accent-amber: #d29922;
+      --accent-red: #f85149;
+      --accent-pink: #f778ba;
+      
+      /* Syntax Highlighting (Dark) */
+      --syntax-keyword: #ff7b72;
+      --syntax-type: #79c0ff;
+      --syntax-func: #d2a8ff;
+      --syntax-string: #a5d6ff;
+      --syntax-number: #79c0ff;
+      --syntax-comment: #8b949e;
+      --syntax-macro: #ffa657;
+      --syntax-asm: #f0883e;
+      --syntax-operator: #79c0ff;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--font-ui);
+      background: var(--bg-app);
+      color: var(--text-main);
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top App Navbar */
+    .app-header {
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      height: 52px;
+      flex-shrink: 0;
+      z-index: 50;
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--accent-blue);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+    }
+    .brand-logo span {
+      background: linear-gradient(135deg, #0969da, #8250df);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-weight: 800;
+    }
+    [data-theme="dark"] .brand-logo span {
+      background: linear-gradient(135deg, #58a6ff, #bc8cff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-badge {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 12px;
+      background: rgba(9, 105, 218, 0.12);
+      color: var(--accent-blue);
+      font-weight: 600;
+      border: 1px solid rgba(9, 105, 218, 0.25);
+    }
+    [data-theme="dark"] .brand-badge {
+      background: rgba(88, 166, 255, 0.15);
+      border-color: rgba(88, 166, 255, 0.3);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .action-btn:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--accent-blue);
+    }
+    .action-btn.active {
+      background: rgba(9, 105, 218, 0.1);
+      border-color: var(--accent-blue);
+      color: var(--accent-blue);
+      font-weight: 600;
+    }
+
+    .nav-doc-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: background 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .nav-doc-link:hover {
+      background: var(--bg-subtle);
+      color: var(--text-main);
+    }
+
+    /* Top File Matrix Bar (11 Core Files) */
+    .matrix-bar {
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      padding: 4px 12px;
+      gap: 4px;
+      overflow-x: auto;
+      white-space: nowrap;
+      height: 42px;
+      flex-shrink: 0;
+      scrollbar-width: thin;
+    }
+    .matrix-bar::-webkit-scrollbar {
+      height: 3px;
+    }
+    .matrix-bar::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 3px;
+    }
+
+    .matrix-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 11px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-family: var(--font-code);
+      cursor: pointer;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .matrix-chip:hover {
+      background: var(--bg-subtle);
+      color: var(--text-main);
+    }
+    .matrix-chip.active {
+      background: var(--bg-app);
+      border-color: var(--border-color);
+      color: var(--accent-blue);
+      font-weight: 600;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .matrix-chip-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 17px;
+      height: 17px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      background: var(--bg-subtle);
+      color: var(--text-dim);
+    }
+    .matrix-chip.active .matrix-chip-num {
+      background: var(--accent-blue);
+      color: #fff;
+    }
+    .matrix-chip-role {
+      font-size: 10px;
+      font-family: var(--font-ui);
+      color: var(--text-dim);
+      font-weight: normal;
+    }
+    .matrix-chip.active .matrix-chip-role {
+      color: var(--text-muted);
+    }
+
+    /* Main Workspace Split Layout */
+    .app-workspace {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Left Pane: Source Code Viewer */
+    .code-pane {
+      width: 50%;
+      min-width: 320px;
+      background: var(--bg-code);
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border-color);
+      position: relative;
+    }
+
+    /* Right Pane: Teaching Walkthrough */
+    .walkthrough-pane {
+      width: 50%;
+      min-width: 320px;
+      background: var(--bg-panel);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Draggable Resizer */
+    .pane-resizer {
+      width: 6px;
+      background: transparent;
+      cursor: col-resize;
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      z-index: 40;
+      margin-left: -3px;
+      transition: background 0.2s;
+    }
+    .pane-resizer:hover, .pane-resizer.dragging {
+      background: var(--accent-blue);
+      box-shadow: 0 0 8px rgba(9, 105, 218, 0.4);
+    }
+
+    /* Pane Top Toolbar */
+    .pane-toolbar {
+      height: 38px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      font-size: 12px;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    .file-meta-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-code);
+    }
+    .file-title-tag {
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    .tier-tag {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: rgba(130, 80, 223, 0.12);
+      color: var(--accent-purple);
+      font-weight: 600;
+    }
+    [data-theme="dark"] .tier-tag {
+      background: rgba(188, 140, 255, 0.15);
+    }
+
+    .code-tools {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .function-dropdown {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      color: var(--text-main);
+      outline: none;
+      max-width: 210px;
+      cursor: pointer;
+    }
+    .jump-line-box {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .jump-line-input {
+      width: 48px;
+      font-size: 11px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      color: var(--text-main);
+      text-align: center;
+      font-family: var(--font-code);
+      outline: none;
+    }
+
+    /* Scrollable Code Area */
+    .code-scroll-container {
+      flex: 1;
+      overflow: auto;
+      font-family: var(--font-code);
+      font-size: var(--code-font-size);
+      line-height: 20px;
+      position: relative;
+    }
+
+    /* Code Line Element */
+    .code-line {
+      display: flex;
+      min-width: 100%;
+      width: max-content;
+      cursor: pointer;
+      user-select: text;
+      transition: background 0.08s ease;
+      position: relative;
+    }
+    .code-line:hover {
+      background: var(--bg-subtle);
+    }
+    .code-line.active-cursor {
+      background: var(--bg-active-line) !important;
+    }
+    .code-line.annotated-highlight {
+      background: rgba(9, 105, 218, 0.04);
+    }
+    [data-theme="dark"] .code-line.annotated-highlight {
+      background: rgba(88, 166, 255, 0.06);
+    }
+    .code-line.pulse-focus {
+      animation: linePulse 1.4s ease-out;
+      background: rgba(9, 105, 218, 0.18) !important;
+    }
+    [data-theme="dark"] .code-line.pulse-focus {
+      background: rgba(88, 166, 255, 0.25) !important;
+    }
+    @keyframes linePulse {
+      0% { background: rgba(234, 179, 8, 0.45); }
+      50% { background: rgba(9, 105, 218, 0.22); }
+      100% { background: rgba(9, 105, 218, 0.08); }
+    }
+
+    /* Line Marker Gutter (Glowing dot indicator) */
+    .line-gutter-marker {
+      width: var(--marker-gutter-width);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .marker-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent-blue);
+      box-shadow: 0 0 6px var(--accent-blue);
+      display: inline-block;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .marker-dot:hover {
+      transform: scale(1.4);
+    }
+
+    /* Line Number Gutter */
+    .line-number {
+      width: var(--gutter-width);
+      flex-shrink: 0;
+      text-align: right;
+      padding-right: 12px;
+      color: var(--text-dim);
+      user-select: none;
+      font-size: 11px;
+    }
+
+    /* Code Text Content */
+    .code-content {
+      flex: 1;
+      padding-right: 24px;
+      white-space: pre;
+    }
+
+    /* Syntax Highlighting Tokens */
+    .tok-kw { color: var(--syntax-keyword); font-weight: 600; }
+    .tok-type { color: var(--syntax-type); font-weight: 600; }
+    .tok-func { color: var(--syntax-func); font-weight: 600; }
+    .tok-str { color: var(--syntax-string); }
+    .tok-num { color: var(--syntax-number); }
+    .tok-com { color: var(--syntax-comment); font-style: italic; }
+    .tok-macro { color: var(--syntax-macro); font-weight: 600; }
+    .tok-asm { color: var(--syntax-asm); font-weight: 600; }
+    .tok-op { color: var(--syntax-operator); }
+
+    /* Right Pane: Walkthrough Content */
+    .walkthrough-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      scroll-behavior: smooth;
+    }
+
+    .walkthrough-header-tools {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      gap: 10px;
+    }
+
+    .annotation-search-input {
+      flex: 1;
+      font-size: 12px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      color: var(--text-main);
+      outline: none;
+    }
+    .annotation-search-input:focus {
+      border-color: var(--accent-blue);
+    }
+
+    /* File Overview Card */
+    .file-overview-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .file-overview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .file-overview-title {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-code);
+    }
+    .file-desc-text {
+      font-size: 12.5px;
+      line-height: 1.5;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+    .file-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 8px;
+      font-size: 11px;
+    }
+    .meta-stat-item {
+      background: var(--bg-subtle);
+      padding: 6px 10px;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .meta-stat-label {
+      color: var(--text-dim);
+    }
+    .meta-stat-val {
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    /* Filter Category Tabs */
+    .filter-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 14px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .filter-tabs::-webkit-scrollbar { display: none; }
+    .filter-tab {
+      padding: 4px 10px;
+      font-size: 11px;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      color: var(--text-muted);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .filter-tab:hover {
+      background: var(--bg-subtle);
+      color: var(--text-main);
+    }
+    .filter-tab.active {
+      background: var(--accent-blue);
+      border-color: var(--accent-blue);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    /* Educational Teaching Card */
+    .teaching-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+      scroll-margin-top: 16px;
+      position: relative;
+    }
+    .teaching-card:hover {
+      border-color: var(--border-highlight);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+    .teaching-card.card-active {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 2px rgba(9, 105, 218, 0.2), 0 4px 12px rgba(0,0,0,0.08);
+      background: var(--bg-card);
+    }
+    .teaching-card.card-pulse {
+      animation: cardHighlight 1.2s ease;
+    }
+    @keyframes cardHighlight {
+      0% { transform: scale(1.01); box-shadow: 0 0 0 4px rgba(9, 105, 218, 0.35); }
+      100% { transform: scale(1); box-shadow: 0 0 0 2px rgba(9, 105, 218, 0.2); }
+    }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      gap: 10px;
+    }
+    .card-title-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+    }
+    .card-fn-title {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--text-main);
+      font-family: var(--font-code);
+    }
+    .card-line-range {
+      font-size: 11px;
+      font-family: var(--font-code);
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--bg-subtle);
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .card-line-range:hover {
+      background: var(--accent-blue);
+      color: #fff;
+    }
+    .card-cat-badge {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .cat-algorithm { background: rgba(9, 105, 218, 0.1); color: var(--accent-blue); }
+    .cat-hardware { background: rgba(5, 150, 105, 0.1); color: var(--accent-cyan); }
+    .cat-fsm { background: rgba(130, 80, 223, 0.1); color: var(--accent-purple); }
+    .cat-protection { background: rgba(207, 34, 46, 0.1); color: var(--accent-red); }
+
+    .btn-focus-code {
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-panel);
+      color: var(--accent-blue);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: 600;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .btn-focus-code:hover {
+      background: var(--accent-blue);
+      color: #fff;
+      border-color: var(--accent-blue);
+    }
+
+    .card-body {
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .card-section-title {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    /* Line-by-line breakdown table */
+    .line-breakdown-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      background: var(--bg-subtle);
+      border-radius: 6px;
+      padding: 8px 10px;
+    }
+    .breakdown-row {
+      display: flex;
+      gap: 10px;
+      font-size: 12px;
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: 4px;
+      transition: background 0.15s;
+    }
+    .breakdown-row:hover {
+      background: var(--bg-panel);
+    }
+    .breakdown-lines {
+      font-family: var(--font-code);
+      font-weight: 600;
+      color: var(--accent-blue);
+      flex-shrink: 0;
+      width: 60px;
+    }
+    .breakdown-desc {
+      color: var(--text-main);
+      flex: 1;
+    }
+
+    /* Math Formulas */
+    .math-formula-box {
+      background: var(--bg-subtle);
+      border-left: 3px solid var(--accent-purple);
+      border-radius: 0 6px 6px 0;
+      padding: 8px 12px;
+      margin-top: 4px;
+      overflow-x: auto;
+    }
+    .math-formula-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+    .math-formula-body {
+      font-size: 13px;
+      color: var(--text-main);
+    }
+
+    /* Callout Alert Boxes */
+    .callout-box {
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 12px;
+      line-height: 1.5;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .callout-header {
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .alert-tip {
+      background: rgba(5, 150, 105, 0.08);
+      border-left: 3px solid var(--accent-cyan);
+      color: var(--text-main);
+    }
+    .alert-tip .callout-header { color: var(--accent-cyan); }
+    .alert-warning {
+      background: rgba(154, 103, 0, 0.08);
+      border-left: 3px solid var(--accent-amber);
+      color: var(--text-main);
+    }
+    .alert-warning .callout-header { color: var(--accent-amber); }
+    .alert-caution {
+      background: rgba(207, 34, 46, 0.08);
+      border-left: 3px solid var(--accent-red);
+      color: var(--text-main);
+    }
+    .alert-caution .callout-header { color: var(--accent-red); }
+    .alert-note {
+      background: rgba(9, 105, 218, 0.08);
+      border-left: 3px solid var(--accent-blue);
+      color: var(--text-main);
+    }
+    .alert-note .callout-header { color: var(--accent-blue); }
+
+    .extension-box {
+      background: var(--bg-subtle);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 12px;
+      color: var(--text-main);
+    }
+
+    /* Dynamic SVG Link Ribbon Canvas */
+    .link-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 35;
+      overflow: visible;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+    .link-canvas.visible {
+      opacity: 1;
+    }
+    .link-ribbon {
+      fill: url(#linkRibbonGradLight);
+      transition: d 0.12s ease-out;
+    }
+    [data-theme="dark"] .link-ribbon {
+      fill: url(#linkRibbonGradDark);
+    }
+    .link-edge-curve {
+      fill: none;
+      stroke: var(--accent-blue);
+      stroke-width: 1.5;
+      opacity: 0.65;
+      transition: d 0.12s ease-out;
+    }
+    [data-theme="dark"] .link-edge-curve {
+      stroke: var(--accent-purple);
+      opacity: 0.75;
+    }
+    .link-bracket {
+      fill: var(--accent-blue);
+      opacity: 0.9;
+      filter: drop-shadow(0 0 5px var(--accent-blue));
+    }
+    [data-theme="dark"] .link-bracket {
+      fill: var(--accent-cyan);
+      filter: drop-shadow(0 0 6px var(--accent-cyan));
+    }
+
+    .code-line.sub-focus {
+      background: rgba(5, 150, 105, 0.18) !important;
+      border-left: 3px solid var(--accent-cyan) !important;
+    }
+
+    /* Responsive Mobile Layout */
+    @media (max-width: 860px) {
+      .app-workspace { flex-direction: column; }
+      .code-pane, .walkthrough-pane { width: 100% !important; flex: 1; }
+      .pane-resizer { display: none; }
+      .link-canvas { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top App Navigation -->
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-logo">⚡ <span>SguanFOC v4.0.0</span></div>
+      <div class="brand-title">
+        <span>源码逐行剖析交互教学工作台</span>
+        <span class="brand-badge">双屏联动精读</span>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button class="action-btn active" id="btnFollowMode" title="开启后，在左侧滚动/点击代码时，右侧卡片自动跟随；反之亦然">
+        🎯 智能双向联动: 开
+      </button>
+
+      <button class="action-btn" id="btnLayoutToggle" title="切换代码与教学双屏占比 (50:50 / 60:40 / 40:60)">
+        📊 比例: 50:50
+      </button>
+
+      <button class="action-btn" id="btnThemeToggle" title="切换深色/浅色主题">
+        ☀️ 浅色
+      </button>
+
+      <div style="display: flex; gap: 2px;">
+        <button class="action-btn" id="btnFontDec" style="padding: 5px 8px;" title="缩小代码字号">A-</button>
+        <button class="action-btn" id="btnFontInc" style="padding: 5px 8px;" title="放大代码字号">A+</button>
+      </div>
+
+      <a href="source_code_function_guide.html" class="nav-doc-link" title="返回核心源码函数级逐行深度解析手册">
+        🔬 逐行手册
+      </a>
+      <a href="foc_code_analysis.html" class="nav-doc-link" title="返回架构与源码全景解析">
+        📖 架构全景
+      </a>
+      <a href="beginner_sbs_guide.html" class="nav-doc-link" title="返回初学者手把手实战指南">
+        🛠️ 新手实操
+      </a>
+      <a href="walkthrough.html" class="nav-doc-link" title="返回教学索引与学习路线指南">
+        📝 学习路线
+      </a>
+    </div>
+  </header>
+
+  <!-- 11 大核心文件职责矩阵选择栏 -->
+  <nav class="matrix-bar" id="matrixBar">
+    <!-- Populated dynamically from window.WALKTHROUGH_DATA -->
+  </nav>
+
+  <!-- Main Split Interactive Workspace -->
+  <main class="app-workspace" id="appWorkspace">
+
+    <!-- Area Connector Ribbon (code range -> walkthrough card) -->
+    <svg id="linkCanvas" class="link-canvas" aria-hidden="true">
+      <defs>
+        <linearGradient id="linkRibbonGradLight" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#0969da" stop-opacity="0.20" />
+          <stop offset="40%" stop-color="#2f81f7" stop-opacity="0.15" />
+          <stop offset="100%" stop-color="#8250df" stop-opacity="0.10" />
+        </linearGradient>
+        <linearGradient id="linkRibbonGradDark" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#58a6ff" stop-opacity="0.28" />
+          <stop offset="40%" stop-color="#79c0ff" stop-opacity="0.20" />
+          <stop offset="100%" stop-color="#bc8cff" stop-opacity="0.12" />
+        </linearGradient>
+      </defs>
+      <path id="linkRibbon" class="link-ribbon" d="" />
+      <path id="linkTopEdge" class="link-edge-curve" d="" />
+      <path id="linkBottomEdge" class="link-edge-curve" d="" />
+      <rect id="linkCodeBracket" class="link-bracket" rx="2" />
+    </svg>
+
+    <!-- Left Pane: Raw Source Code Viewer with Line Numbers & Highlights -->
+    <section class="code-pane" id="codePane">
+      <div class="pane-toolbar">
+        <div class="file-meta-badge">
+          <span class="file-title-tag" id="currentFileName">SguanFOC.c</span>
+          <span class="tier-tag" id="currentFileRole">顶层控制与多轴调度</span>
+          <span style="color: var(--text-dim); font-size: 11px;" id="currentFileStats">172 行 · 5 处精析</span>
+        </div>
+        <div class="code-tools">
+          <select class="function-dropdown" id="funcDropdown">
+            <option value="">🎯 快速定位核心函数...</option>
+          </select>
+          <div class="jump-line-box">
+            <input type="text" class="jump-line-input" id="jumpLineInput" placeholder="行号" title="按 Enter 快速跳转到指定行" />
+            <button class="action-btn" id="btnJumpLine" style="padding: 2px 6px;">跳</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-scroll-container" id="codeScrollContainer">
+        <!-- Rendered Code Lines with Line Numbers and Markers -->
+      </div>
+    </section>
+
+    <!-- Resizer Divider -->
+    <div class="pane-resizer" id="paneResizer" title="左右拖动调整双屏比例"></div>
+
+    <!-- Right Pane: Educational Annotations & Dissection Cards -->
+    <section class="walkthrough-pane" id="walkthroughPane">
+      <div class="pane-toolbar">
+        <div class="walkthrough-header-tools" style="width: 100%; margin-bottom: 0;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-weight: 700;">教学精读剖析</span>
+            <span class="brand-badge" id="cardCountBadge">5 处重点剖析</span>
+          </div>
+          <input type="text" class="annotation-search-input" id="annotationSearch" placeholder="🔍 检索函数、算法或避坑要点...">
+        </div>
+      </div>
+
+      <!-- Scrollable Walkthrough Cards Content -->
+      <div class="walkthrough-content" id="walkthroughContent">
+        <!-- File Overview Banner -->
+        <div class="file-overview-card" id="fileOverviewCard">
+          <!-- Populated dynamically -->
+        </div>
+
+        <!-- Category Filter Tabs -->
+        <div class="filter-tabs" id="filterTabs">
+          <div class="filter-tab active" data-cat="all">全部剖析</div>
+          <div class="filter-tab" data-cat="algorithm">核心算法</div>
+          <div class="filter-tab" data-cat="hardware">硬件抽象</div>
+          <div class="filter-tab" data-cat="fsm">状态机调度</div>
+          <div class="filter-tab" data-cat="protection">安全防护</div>
+        </div>
+
+        <!-- Annotation Cards Container -->
+        <div id="cardsContainer">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // State management
+    const state = {
+      files: [],
+      currentFileIndex: 0,
+      activeLine: 1,
+      activeCardId: null,
+      followMode: true,
+      currentFilter: 'all',
+      subFocusRange: null,
+      codeFontSize: 13,
+      layoutRatio: '50:50', // '50:50', '60:40', '40:60'
+      theme: 'light'
+    };
+
+    // DOM Elements
+    const matrixBar = document.getElementById('matrixBar');
+    const codePane = document.getElementById('codePane');
+    const walkthroughPane = document.getElementById('walkthroughPane');
+    const paneResizer = document.getElementById('paneResizer');
+    const codeScrollContainer = document.getElementById('codeScrollContainer');
+    const walkthroughContent = document.getElementById('walkthroughContent');
+    const fileOverviewCard = document.getElementById('fileOverviewCard');
+    const cardsContainer = document.getElementById('cardsContainer');
+    const funcDropdown = document.getElementById('funcDropdown');
+    const currentFileName = document.getElementById('currentFileName');
+    const currentFileRole = document.getElementById('currentFileRole');
+    const currentFileStats = document.getElementById('currentFileStats');
+    const cardCountBadge = document.getElementById('cardCountBadge');
+    const btnFollowMode = document.getElementById('btnFollowMode');
+    const btnLayoutToggle = document.getElementById('btnLayoutToggle');
+    const btnThemeToggle = document.getElementById('btnThemeToggle');
+    const btnFontInc = document.getElementById('btnFontInc');
+    const btnFontDec = document.getElementById('btnFontDec');
+    const jumpLineInput = document.getElementById('jumpLineInput');
+    const btnJumpLine = document.getElementById('btnJumpLine');
+    const annotationSearch = document.getElementById('annotationSearch');
+    const filterTabs = document.getElementById('filterTabs');
+    const appWorkspace = document.getElementById('appWorkspace');
+    const linkCanvas = document.getElementById('linkCanvas');
+    const linkRibbon = document.getElementById('linkRibbon');
+    const linkTopEdge = document.getElementById('linkTopEdge');
+    const linkBottomEdge = document.getElementById('linkBottomEdge');
+    const linkCodeBracket = document.getElementById('linkCodeBracket');
+
+    // Restore shared docs theme preference
+    const savedTheme = localStorage.getItem('sguanfoc-docs-theme');
+    state.theme = savedTheme === 'dark' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', state.theme);
+    btnThemeToggle.innerText = state.theme === 'dark' ? '🌙 深色' : '☀️ 浅色';
+
+    // Application Entry
+    window.addEventListener('DOMContentLoaded', () => {
+      if (!window.WALKTHROUGH_DATA || !window.WALKTHROUGH_DATA.files || !window.WALKTHROUGH_DATA.files.length) {
+        alert('未检测到 walkthrough_data.js 数据文件，请检查构建流程！');
+        return;
+      }
+      state.files = window.WALKTHROUGH_DATA.files;
+
+      // Check URL hash for initial file
+      const hash = window.location.hash.replace('#', '');
+      let initFileIdx = 0;
+      if (hash) {
+        const foundIdx = state.files.findIndex(f => f.id === hash || f.name.toLowerCase() === hash.toLowerCase());
+        if (foundIdx !== -1) initFileIdx = foundIdx;
+      }
+
+      buildMatrixTabs();
+      switchFile(initFileIdx);
+      initResizer();
+      bindEvents();
+    });
+
+    // 1. Build 11 Core Matrix Tabs
+    function buildMatrixTabs() {
+      matrixBar.innerHTML = '';
+      state.files.forEach((f, idx) => {
+        const chip = document.createElement('div');
+        chip.className = `matrix-chip ${idx === state.currentFileIndex ? 'active' : ''}`;
+        chip.dataset.idx = idx;
+        chip.innerHTML = `
+          <span class="matrix-chip-num">${f.matrixIndex}</span>
+          <span>${f.name}</span>
+          <span class="matrix-chip-role">${f.role}</span>
+        `;
+        chip.onclick = () => switchFile(idx);
+        matrixBar.appendChild(chip);
+      });
+    }
+
+    // 2. Switch Active File
+    function switchFile(fileIndex) {
+      if (fileIndex < 0 || fileIndex >= state.files.length) return;
+      state.currentFileIndex = fileIndex;
+      const file = state.files[fileIndex];
+
+      // Update URL Hash without reload
+      if (window.history.pushState) {
+        window.history.pushState(null, null, `#${file.id}`);
+      }
+
+      // Update Top Chips
+      document.querySelectorAll('.matrix-chip').forEach((chip, idx) => {
+        chip.classList.toggle('active', idx === fileIndex);
+        if (idx === fileIndex) chip.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      });
+
+      // Update Metadata Bar
+      currentFileName.innerText = file.name;
+      currentFileRole.innerText = file.role;
+      currentFileStats.innerText = `${file.lineCount} 行 · ${(file.sizeBytes / 1024).toFixed(1)} KB · ${file.annotations.length} 处精析`;
+      cardCountBadge.innerText = `${file.annotations.length} 处重点剖析`;
+
+      // Populate Quick Function Dropdown
+      funcDropdown.innerHTML = '<option value="">🎯 快速定位核心函数...</option>';
+      file.annotations.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.startLine;
+        opt.innerText = `L${a.startLine}-${a.endLine}: ${a.title.split(' ')[0]}`;
+        funcDropdown.appendChild(opt);
+      });
+
+      // Render Left Code
+      renderSourceCode(file);
+
+      // Render Right Walkthrough Cards
+      renderWalkthrough(file);
+
+      // Reset scroll position
+      codeScrollContainer.scrollTop = 0;
+      walkthroughContent.scrollTop = 0;
+
+      // Reset association state: clear ribbon curve & active card
+      state.activeCardId = null;
+      clearLinkCurve();
+    }
+
+    // 3. High-Performance C Syntax Highlighter & Line Renderer
+    function renderSourceCode(file) {
+      const lines = file.content.split('\n');
+      const frag = document.createDocumentFragment();
+
+      // Create a lookup map for annotated line ranges
+      const lineAnnotationMap = new Map();
+      file.annotations.forEach(ann => {
+        for (let l = ann.startLine; l <= ann.endLine; l++) {
+          if (!lineAnnotationMap.has(l)) {
+            lineAnnotationMap.set(l, ann);
+          }
+        }
+      });
+
+      lines.forEach((lineText, idx) => {
+        const lineNum = idx + 1;
+        const lineDiv = document.createElement('div');
+        lineDiv.className = 'code-line';
+        lineDiv.id = `L${lineNum}`;
+        lineDiv.dataset.line = lineNum;
+
+        const matchingAnn = lineAnnotationMap.get(lineNum);
+        if (matchingAnn) {
+          lineDiv.classList.add('annotated-highlight');
+        }
+
+        // 1. Marker Gutter (glowing dot on start line)
+        const markerDiv = document.createElement('div');
+        markerDiv.className = 'line-gutter-marker';
+        if (matchingAnn && matchingAnn.startLine === lineNum) {
+          const dot = document.createElement('span');
+          dot.className = 'marker-dot';
+          dot.title = `点击聚焦剖析卡片: ${matchingAnn.title}`;
+          dot.onclick = (e) => {
+            e.stopPropagation();
+            focusAnnotationCard(matchingAnn.id, lineNum, matchingAnn.endLine);
+          };
+          markerDiv.appendChild(dot);
+        }
+
+        // 2. Line Number Gutter
+        const numDiv = document.createElement('div');
+        numDiv.className = 'line-number';
+        numDiv.innerText = lineNum;
+
+        // 3. Code Content with C Syntax Highlighting
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'code-content';
+        contentDiv.innerHTML = `<span class="code-text">${highlightCLanguage(lineText)}</span>`;
+
+        lineDiv.appendChild(markerDiv);
+        lineDiv.appendChild(numDiv);
+        lineDiv.appendChild(contentDiv);
+
+        // Click line action
+        lineDiv.onclick = () => {
+          setActiveLine(lineNum, true);
+        };
+
+        frag.appendChild(lineDiv);
+      });
+
+      codeScrollContainer.innerHTML = '';
+      codeScrollContainer.appendChild(frag);
+    }
+
+    // Robust, ultra-fast C Language Syntax Highlighter
+    function highlightCLanguage(text) {
+      if (!text) return '&nbsp;';
+
+      // HTML escape
+      let s = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+      // 1. Single-line comments
+      if (s.trim().startsWith('//')) {
+        return `<span class="tok-com">${s}</span>`;
+      }
+
+      // Check inline comment
+      let inlineComment = '';
+      const commentIdx = s.indexOf('//');
+      if (commentIdx !== -1) {
+        inlineComment = `<span class="tok-com">${s.slice(commentIdx)}</span>`;
+        s = s.slice(0, commentIdx);
+      }
+
+      // 2. Preprocessor directives (#include, #define, #if, etc.)
+      if (s.trim().startsWith('#')) {
+        s = s.replace(/(#\w+)/, '<span class="tok-macro">$1</span>');
+      }
+
+      // 3. String literals
+      s = s.replace(/(".*?"|'.*?'|&lt;.*?&gt;)/g, '<span class="tok-str">$1</span>');
+
+      // 4. Intrinsics & Custom Types
+      const asmKeywords = ['__smlaltb', '__smlaltt', '__WFI', 'nop', 'SguanFoc', 'Transfer', 'Clarke', 'Park', 'Ipark', 'Svpwm', 'Pid', 'Lpf1', 'Lpf2', 'Hpf1', 'Bpf1', 'Sogi', 'Nf', 'Smo', 'Hfi', 'Ekf', 'Ladrc1', 'Ladrc2', 'Smc', 'Dpcc', 'Q31', 'Q15', 'SguanQ', 'SguanF'];
+      asmKeywords.forEach(kw => {
+        const re = new RegExp(`\\b(${kw})\\b`, 'g');
+        s = s.replace(re, '<span class="tok-asm">$1</span>');
+      });
+
+      // 5. Types & Qualifiers
+      const types = ['void', 'int', 'uint32_t', 'uint16_t', 'uint8_t', 'int32_t', 'int16_t', 'int8_t', 'int64_t', 'float', 'double', 'bool', 'size_t', 'char'];
+      types.forEach(t => {
+        const re = new RegExp(`\\b(${t})\\b`, 'g');
+        s = s.replace(re, '<span class="tok-type">$1</span>');
+      });
+
+      // 6. C Keywords
+      const keywords = ['static', 'const', 'extern', 'volatile', 'struct', 'union', 'enum', 'typedef', 'return', 'if', 'else', 'for', 'while', 'do', 'switch', 'case', 'break', 'continue', 'sizeof', 'true', 'false', 'NULL'];
+      keywords.forEach(kw => {
+        const re = new RegExp(`\\b(${kw})\\b`, 'g');
+        s = s.replace(re, '<span class="tok-kw">$1</span>');
+      });
+
+      // 7. Numbers (hex & dec & float)
+      s = s.replace(/\b(0x[0-9a-fA-F]+|\d+\.?\d*f?)\b/g, '<span class="tok-num">$1</span>');
+
+      return s + inlineComment;
+    }
+
+    // 4. Render Right Walkthrough Cards & LaTeX Math
+    function renderWalkthrough(file) {
+      // 1. Overview Card
+      fileOverviewCard.innerHTML = `
+        <div class="file-overview-header">
+          <div class="file-overview-title">
+            <span>[#${file.matrixIndex}] ${file.name}</span>
+            <span class="brand-badge">${file.badge}</span>
+          </div>
+          <span style="font-size: 11px; color: var(--text-dim);">${file.header ? '包含头文件: ' + file.header : ''}</span>
+        </div>
+        <div class="file-desc-text">${file.shortDesc}</div>
+        <div class="file-meta-grid">
+          <div class="meta-stat-item">
+            <span class="meta-stat-label">架构角色</span>
+            <span class="meta-stat-val" style="color: var(--accent-purple);">${file.role}</span>
+          </div>
+          <div class="meta-stat-item">
+            <span class="meta-stat-label">关联硬件 / 外设</span>
+            <span class="meta-stat-val" style="color: var(--accent-cyan);">${file.hardware}</span>
+          </div>
+          <div class="meta-stat-item">
+            <span class="meta-stat-label">源码体量</span>
+            <span class="meta-stat-val">${file.lineCount} 行 / ${(file.sizeBytes / 1024).toFixed(1)} KB</span>
+          </div>
+          <div class="meta-stat-item">
+            <span class="meta-stat-label">逐行剖析点</span>
+            <span class="meta-stat-val" style="color: var(--accent-blue);">${file.annotations.length} 个核心算法/机制</span>
+          </div>
+        </div>
+      `;
+
+      // 2. Render Cards
+      renderCards(file.annotations);
+
+      // 3. Trigger KaTeX Auto-Render
+      if (typeof renderMathInElement !== 'undefined') {
+        renderMathInElement(walkthroughContent, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false},
+            {left: '\\(', right: '\\)', display: false},
+            {left: '\\[', right: '\\]', display: true}
+          ],
+          throwOnError: false
+        });
+      }
+    }
+
+    // Render Annotation Cards with Filter Support
+    function renderCards(annotations) {
+      cardsContainer.innerHTML = '';
+      const filter = state.currentFilter;
+      const search = (annotationSearch.value || '').trim().toLowerCase();
+
+      let visibleCount = 0;
+
+      annotations.forEach(ann => {
+        if (filter !== 'all' && ann.category !== filter) return;
+        if (search) {
+          const matchTitle = ann.title.toLowerCase().includes(search);
+          const matchSummary = ann.summary.toLowerCase().includes(search);
+          const matchTag = (ann.tag || '').toLowerCase().includes(search);
+          if (!matchTitle && !matchSummary && !matchTag) return;
+        }
+
+        visibleCount++;
+        const card = document.createElement('div');
+        card.className = 'teaching-card';
+        card.id = `card-${ann.id}`;
+        card.dataset.id = ann.id;
+        card.dataset.start = ann.startLine;
+        card.dataset.end = ann.endLine;
+
+        // Line-by-line breakdown rows
+        let breakdownHtml = '';
+        if (ann.lineByLine && ann.lineByLine.length) {
+          breakdownHtml = `
+            <div>
+              <div class="card-section-title">🔍 逐行原理与执行分解</div>
+              <div class="line-breakdown-list">
+                ${ann.lineByLine.map(item => `
+                  <div class="breakdown-row" onmouseenter="setSubBreakdownFocus('${item.lines}')" onmouseleave="clearSubBreakdownFocus()">
+                    <span class="breakdown-lines" onclick="jumpToCodeRange(${item.lines.split('-')[0]}, ${item.lines.split('-')[1] || item.lines.split('-')[0]})">L${item.lines}</span>
+                    <span class="breakdown-desc">${item.desc}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }
+
+        // Math Formulas
+        let mathHtml = '';
+        if (ann.math && ann.math.length) {
+          mathHtml = `
+            <div>
+              <div class="card-section-title">📐 数学模型与物理推导</div>
+              ${ann.math.map(m => `
+                <div class="math-formula-box">
+                  <div class="math-formula-label">${m.label}</div>
+                  <div class="math-formula-body">$$${m.formula}$$</div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        }
+
+        // Pitfalls / Precautions Callouts
+        let pitfallsHtml = '';
+        if (ann.pitfalls && ann.pitfalls.length) {
+          pitfallsHtml = `
+            <div>
+              <div class="card-section-title">⚠️ 避坑要点与硬件陷阱</div>
+              ${ann.pitfalls.map(p => {
+                const alertClass = p.type === 'WARNING' ? 'alert-warning' : p.type === 'CAUTION' ? 'alert-caution' : p.type === 'TIP' ? 'alert-tip' : 'alert-note';
+                const icon = p.type === 'WARNING' ? '⚠️' : p.type === 'CAUTION' ? '🛑' : p.type === 'TIP' ? '💡' : '📌';
+                return `
+                  <div class="callout-box ${alertClass}">
+                    <div class="callout-header">${icon} ${p.title}</div>
+                    <div>${p.text}</div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `;
+        }
+
+        // Extension Box
+        let extensionHtml = '';
+        if (ann.extensions) {
+          extensionHtml = `
+            <div>
+              <div class="card-section-title">🚀 延伸拓展与工程实战</div>
+              <div class="extension-box">${ann.extensions}</div>
+            </div>
+          `;
+        }
+
+        card.innerHTML = `
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="card-fn-title">${ann.title}</span>
+              <span class="card-line-range" onclick="jumpToCodeRange(${ann.startLine}, ${ann.endLine})" title="点击定位到左侧代码">
+                L${ann.startLine} - L${ann.endLine}
+              </span>
+              <span class="card-cat-badge cat-${ann.category}">${ann.categoryName}</span>
+            </div>
+
+            <button class="btn-focus-code" onclick="focusAnnotationCard('${ann.id}', ${ann.startLine}, ${ann.endLine})">
+              🎯 定位源码
+            </button>
+          </div>
+
+          <div class="card-body">
+            <div style="color: var(--text-main); font-weight: 500;">
+              ${ann.summary}
+            </div>
+
+            ${ann.pipeline ? `
+              <div style="font-size: 11px; color: var(--accent-cyan); background: var(--bg-subtle); padding: 6px 10px; border-radius: 4px; font-family: var(--font-code);">
+                ⚡ 流水线链路: ${ann.pipeline}
+              </div>
+            ` : ''}
+
+            ${breakdownHtml}
+            ${mathHtml}
+            ${pitfallsHtml}
+            ${extensionHtml}
+          </div>
+        `;
+
+        cardsContainer.appendChild(card);
+      });
+
+      if (visibleCount === 0) {
+        cardsContainer.innerHTML = `
+          <div style="text-align: center; padding: 40px; color: var(--text-dim);">
+            未找到与当前筛选条件匹配的剖析卡片
+          </div>
+        `;
+      }
+
+      scheduleLinkRedraw();
+    }
+
+    // 5. Interactive Bidirectional Linkage
+    // From Right to Left: Jump to Code and Glow
+    window.focusAnnotationCard = function(cardId, startLine, endLine) {
+      state.activeCardId = cardId;
+
+      // Highlight active card
+      document.querySelectorAll('.teaching-card').forEach(c => {
+        c.classList.remove('card-active', 'card-pulse');
+      });
+      const activeCard = document.getElementById(`card-${cardId}`);
+      if (activeCard) {
+        activeCard.classList.add('card-active', 'card-pulse');
+        activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      jumpToCodeRange(startLine, endLine);
+    };
+
+    window.jumpToCodeRange = function(startLine, endLine) {
+      const targetEl = document.getElementById(`L${startLine}`);
+      if (!targetEl) return;
+
+      // Scroll smoothly to center the lines
+      targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+      // Trigger pulse animation across lines
+      for (let l = startLine; l <= endLine; l++) {
+        const lineEl = document.getElementById(`L${l}`);
+        if (lineEl) {
+          lineEl.classList.remove('pulse-focus');
+          void lineEl.offsetWidth; // trigger reflow
+          lineEl.classList.add('pulse-focus');
+        }
+      }
+
+      // Activate the matching annotation card so the ribbon link can render
+      const file = state.files[state.currentFileIndex];
+      const match = file.annotations.find(a => startLine >= a.startLine && startLine <= a.endLine);
+      if (match) {
+        state.activeCardId = match.id;
+        document.querySelectorAll('.teaching-card').forEach(c => c.classList.remove('card-active', 'card-pulse'));
+        const cardEl = document.getElementById(`card-${match.id}`);
+        if (cardEl) {
+          cardEl.classList.add('card-active');
+          cardEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }
+
+      setActiveLine(startLine, false);
+      scheduleLinkRedraw();
+    };
+
+    // From Left to Right: Clicking/Selecting Line in Code triggers Card Focus
+    function setActiveLine(lineNum, syncRightPane) {
+      state.activeLine = lineNum;
+
+      // Remove existing cursor highlight
+      document.querySelectorAll('.code-line.active-cursor').forEach(el => {
+        el.classList.remove('active-cursor');
+      });
+
+      const lineEl = document.getElementById(`L${lineNum}`);
+      if (lineEl) {
+        lineEl.classList.add('active-cursor');
+      }
+
+      if (!syncRightPane) return;
+
+      // Find matching annotation
+      const file = state.files[state.currentFileIndex];
+      const match = file.annotations.find(a => lineNum >= a.startLine && lineNum <= a.endLine);
+
+      if (match) {
+        state.activeCardId = match.id;
+        document.querySelectorAll('.teaching-card').forEach(c => c.classList.remove('card-active', 'card-pulse'));
+        const card = document.getElementById(`card-${match.id}`);
+        if (card) {
+          card.classList.add('card-active', 'card-pulse');
+          card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        scheduleLinkRedraw();
+      }
+    }
+
+    // Dynamic Area Ribbon Highlight Engine (Code Range -> Walkthrough Card)
+    let linkRafPending = false;
+
+    function scheduleLinkRedraw() {
+      if (linkRafPending) return;
+      linkRafPending = true;
+      requestAnimationFrame(() => {
+        linkRafPending = false;
+        drawLinkCurve();
+      });
+    }
+
+    function clearLinkCurve() {
+      linkCanvas.classList.remove('visible');
+      linkRibbon.setAttribute('d', '');
+      linkTopEdge.setAttribute('d', '');
+      linkBottomEdge.setAttribute('d', '');
+      linkCodeBracket.style.display = 'none';
+    }
+
+    // Sub-breakdown Row Precision Focus
+    window.setSubBreakdownFocus = function(linesStr) {
+      if (!linesStr) return;
+      const parts = linesStr.split('-');
+      const start = parseInt(parts[0], 10);
+      const end = parseInt(parts[1] || parts[0], 10);
+      state.subFocusRange = [start, end];
+      document.querySelectorAll('.code-line.sub-focus').forEach(el => el.classList.remove('sub-focus'));
+      for (let l = start; l <= end; l++) {
+        const lineEl = document.getElementById(`L${l}`);
+        if (lineEl) lineEl.classList.add('sub-focus');
+      }
+      scheduleLinkRedraw();
+    };
+
+    window.clearSubBreakdownFocus = function() {
+      state.subFocusRange = null;
+      document.querySelectorAll('.code-line.sub-focus').forEach(el => el.classList.remove('sub-focus'));
+      scheduleLinkRedraw();
+    };
+
+    function drawLinkCurve() {
+      const file = state.files[state.currentFileIndex];
+      if (!file) { clearLinkCurve(); return; }
+
+      const wsRect = appWorkspace.getBoundingClientRect();
+      const codeRect = codePane.getBoundingClientRect();
+      const wpRect = walkthroughPane.getBoundingClientRect();
+      if (wsRect.width < 10 || wsRect.height < 10) { clearLinkCurve(); return; }
+
+      // Draw Active Focused Area Ribbon
+      const ann = state.activeCardId ? file.annotations.find(a => a.id === state.activeCardId) : null;
+      const card = ann ? document.getElementById(`card-${state.activeCardId}`) : null;
+
+      if (!ann || !card) {
+        clearLinkCurve();
+        return;
+      }
+
+      const activeRange = state.subFocusRange || [ann.startLine, ann.endLine];
+      const firstLine = document.getElementById(`L${activeRange[0]}`);
+      const lastLine = document.getElementById(`L${activeRange[1]}`) || firstLine;
+
+      if (!firstLine) {
+        clearLinkCurve();
+        return;
+      }
+
+      const codeScrollRect = codeScrollContainer.getBoundingClientRect();
+      const wpScrollRect = walkthroughContent.getBoundingClientRect();
+      const lRect = firstLine.getBoundingClientRect();
+      const eRect = lastLine.getBoundingClientRect();
+
+      const rangeTop = Math.min(lRect.top, eRect.top);
+      const rangeBottom = Math.max(lRect.bottom, eRect.bottom);
+      const visCodeTop = Math.max(rangeTop, codeScrollRect.top);
+      const visCodeBottom = Math.min(rangeBottom, codeScrollRect.bottom);
+
+      const cardRect = card.getBoundingClientRect();
+      const visCardTop = Math.max(cardRect.top, wpScrollRect.top);
+      const visCardBottom = Math.min(cardRect.bottom, wpScrollRect.bottom);
+
+      // Render only if both code block and card are visible in viewport
+      if (visCodeBottom <= visCodeTop || visCardBottom <= visCardTop) {
+        clearLinkCurve();
+        return;
+      }
+
+      // Left anchor: start from middle region of the left code pane
+      const codeMidX = codeRect.left + codeRect.width * 0.52;
+      const minX = codeRect.left + 220;
+      const maxX = codeRect.right - 45;
+      const x1 = Math.min(maxX, Math.max(minX, codeMidX)) - wsRect.left;
+
+      // Right anchor: walkthrough card left edge
+      const x2 = cardRect.left - wsRect.left;
+
+      const yCodeTop = visCodeTop - wsRect.top;
+      const yCodeBottom = visCodeBottom - wsRect.top;
+      const yCardTop = visCardTop - wsRect.top;
+      const yCardBottom = visCardBottom - wsRect.top;
+
+      // Smooth horizontal tangent handle span across the splitter
+      const span = Math.max(x2 - x1, 40);
+      const cx1 = x1 + span * 0.50;
+      const cx2 = x2 - span * 0.50;
+
+      // 1. Shaded Area Ribbon Path
+      const dRibbon = `M ${x1.toFixed(1)} ${yCodeTop.toFixed(1)} `
+                    + `C ${cx1.toFixed(1)} ${yCodeTop.toFixed(1)}, ${cx2.toFixed(1)} ${yCardTop.toFixed(1)}, ${x2.toFixed(1)} ${yCardTop.toFixed(1)} `
+                    + `L ${x2.toFixed(1)} ${yCardBottom.toFixed(1)} `
+                    + `C ${cx2.toFixed(1)} ${yCardBottom.toFixed(1)}, ${cx1.toFixed(1)} ${yCodeBottom.toFixed(1)}, ${x1.toFixed(1)} ${yCodeBottom.toFixed(1)} Z`;
+      linkRibbon.setAttribute('d', dRibbon);
+
+      // 2. Top and Bottom Boundary Contours
+      const dTop = `M ${x1.toFixed(1)} ${yCodeTop.toFixed(1)} C ${cx1.toFixed(1)} ${yCodeTop.toFixed(1)}, ${cx2.toFixed(1)} ${yCardTop.toFixed(1)}, ${x2.toFixed(1)} ${yCardTop.toFixed(1)}`;
+      const dBottom = `M ${x1.toFixed(1)} ${yCodeBottom.toFixed(1)} C ${cx1.toFixed(1)} ${yCodeBottom.toFixed(1)}, ${cx2.toFixed(1)} ${yCardBottom.toFixed(1)}, ${x2.toFixed(1)} ${yCardBottom.toFixed(1)}`;
+      linkTopEdge.setAttribute('d', dTop);
+      linkBottomEdge.setAttribute('d', dBottom);
+
+      // 3. Left Code Block Vertical Bracket Bar
+      linkCodeBracket.setAttribute('x', (x1 - 4).toFixed(1));
+      linkCodeBracket.setAttribute('y', yCodeTop.toFixed(1));
+      linkCodeBracket.setAttribute('width', '4');
+      linkCodeBracket.setAttribute('height', Math.max(6, yCodeBottom - yCodeTop).toFixed(1));
+      linkCodeBracket.style.display = 'block';
+
+      linkCanvas.classList.add('visible');
+    }
+
+    // Bind Controls and Handlers
+    function bindEvents() {
+      // 1. Follow Mode Toggle
+      btnFollowMode.onclick = () => {
+        state.followMode = !state.followMode;
+        btnFollowMode.classList.toggle('active', state.followMode);
+        btnFollowMode.innerText = `🎯 智能双向联动: ${state.followMode ? '开' : '关'}`;
+      };
+
+      // 2. Layout Ratio Toggle
+      btnLayoutToggle.onclick = () => {
+        if (state.layoutRatio === '50:50') {
+          state.layoutRatio = '60:40';
+          codePane.style.flex = '1.5';
+          walkthroughPane.style.flex = '1';
+        } else if (state.layoutRatio === '60:40') {
+          state.layoutRatio = '40:60';
+          codePane.style.flex = '1';
+          walkthroughPane.style.flex = '1.5';
+        } else {
+          state.layoutRatio = '50:50';
+          codePane.style.flex = '1';
+          walkthroughPane.style.flex = '1';
+        }
+        btnLayoutToggle.innerText = `📊 比例: ${state.layoutRatio}`;
+        scheduleLinkRedraw();
+      };
+
+      // 3. Theme Toggle
+      btnThemeToggle.onclick = () => {
+        state.theme = state.theme === 'dark' ? 'light' : 'dark';
+        localStorage.setItem('sguanfoc-docs-theme', state.theme);
+        document.documentElement.setAttribute('data-theme', state.theme);
+        btnThemeToggle.innerText = state.theme === 'dark' ? '🌙 深色' : '☀️ 浅色';
+      };
+
+      // 4. Code Font Size Adjust
+      btnFontInc.onclick = () => {
+        if (state.codeFontSize < 20) {
+          state.codeFontSize += 1;
+          document.documentElement.style.setProperty('--code-font-size', `${state.codeFontSize}px`);
+          scheduleLinkRedraw();
+        }
+      };
+      btnFontDec.onclick = () => {
+        if (state.codeFontSize > 10) {
+          state.codeFontSize -= 1;
+          document.documentElement.style.setProperty('--code-font-size', `${state.codeFontSize}px`);
+          scheduleLinkRedraw();
+        }
+      };
+
+      // 5. Jump to Line
+      const doJump = () => {
+        const val = parseInt(jumpLineInput.value, 10);
+        if (!isNaN(val)) {
+          const target = document.getElementById(`L${val}`);
+          if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setActiveLine(val, true);
+          }
+        }
+      };
+      btnJumpLine.onclick = doJump;
+      jumpLineInput.onkeydown = (e) => { if (e.key === 'Enter') doJump(); };
+
+      // 6. Function Quick Jump Dropdown
+      funcDropdown.onchange = () => {
+        const line = parseInt(funcDropdown.value, 10);
+        if (!isNaN(line)) {
+          jumpToCodeRange(line, line + 15);
+        }
+      };
+
+      // 7. Annotation Search
+      annotationSearch.oninput = () => {
+        const file = state.files[state.currentFileIndex];
+        renderCards(file.annotations);
+        if (typeof renderMathInElement !== 'undefined') {
+          renderMathInElement(cardsContainer, {
+            delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]
+          });
+        }
+      };
+
+      // 8. Filter Tabs
+      filterTabs.querySelectorAll('.filter-tab').forEach(tab => {
+        tab.onclick = () => {
+          filterTabs.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          state.currentFilter = tab.dataset.cat;
+          const file = state.files[state.currentFileIndex];
+          renderCards(file.annotations);
+          if (typeof renderMathInElement !== 'undefined') {
+            renderMathInElement(cardsContainer, {
+              delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]
+            });
+          }
+        };
+      });
+
+      // 9. Follow Mode Scroll Listener (Code Pane)
+      let scrollTimer = null;
+      codeScrollContainer.addEventListener('scroll', () => {
+        if (!state.followMode) return;
+        clearTimeout(scrollTimer);
+        scrollTimer = setTimeout(() => {
+          const rect = codeScrollContainer.getBoundingClientRect();
+          const midY = rect.top + rect.height / 2;
+          const el = document.elementFromPoint(rect.left + 80, midY);
+          if (el) {
+            const lineRow = el.closest('.code-line');
+            if (lineRow && lineRow.dataset.line) {
+              const line = parseInt(lineRow.dataset.line, 10);
+              const file = state.files[state.currentFileIndex];
+              const match = file.annotations.find(a => line >= a.startLine && line <= a.endLine);
+              if (match && match.id !== state.activeCardId) {
+                state.activeCardId = match.id;
+                document.querySelectorAll('.teaching-card').forEach(c => c.classList.remove('card-active'));
+                const card = document.getElementById(`card-${match.id}`);
+                if (card) {
+                  card.classList.add('card-active');
+                  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+                scheduleLinkRedraw();
+              }
+            }
+          }
+        }, 150);
+      });
+
+      // 10. Keep the association curve in sync on scroll & resize
+      codeScrollContainer.addEventListener('scroll', scheduleLinkRedraw);
+      walkthroughContent.addEventListener('scroll', scheduleLinkRedraw);
+      window.addEventListener('resize', scheduleLinkRedraw);
+    }
+
+    // Drag Resizer between Code & Walkthrough Panes
+    function initResizer() {
+      let isDragging = false;
+      const workspace = document.getElementById('appWorkspace');
+
+      paneResizer.addEventListener('mousedown', function(e) {
+        isDragging = true;
+        paneResizer.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+      });
+
+      document.addEventListener('mousemove', function(e) {
+        if (!isDragging) return;
+        const rect = workspace.getBoundingClientRect();
+        const offsetX = e.clientX - rect.left;
+        const totalW = rect.width;
+
+        if (offsetX > 250 && offsetX < totalW - 250) {
+          const leftPercent = (offsetX / totalW) * 100;
+          codePane.style.flex = `${leftPercent}`;
+          walkthroughPane.style.flex = `${100 - leftPercent}`;
+          btnLayoutToggle.innerText = `📊 自定义比例`;
+          scheduleLinkRedraw();
+        }
+      });
+
+      document.addEventListener('mouseup', function() {
+        if (isDragging) {
+          isDragging = false;
+          paneResizer.classList.remove('dragging');
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+        }
+      });
+    }
+  </script>
+</body>
+</html>

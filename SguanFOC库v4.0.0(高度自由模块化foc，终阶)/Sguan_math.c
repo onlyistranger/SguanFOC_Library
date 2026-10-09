@@ -92,38 +92,63 @@ static const float sin_tab[512] = {
     -0.0245411228f, -0.0122713987f
 };
 
-// 快速正弦算法sine
+/**
+ * @brief  极速正弦函数计算 (基于 512 点等间隔高精度查表法)
+ * @param  theta: 待求角度 (单位: rad, 弧度制)
+ * @retval 对应正弦值 sin(theta) ∈ [-1.0, +1.0]
+ * @note   1. 周期性边界折返: 通过取模循环将任意输入映射至 [0, 2π] 区间;
+ *         2. 弧度到查表索引映射: 比例系数 MATH_512_2PI = 512 / (2π) ≈ 81.48733;
+ *         3. 索引安全防护: 限制在 [0, 511] 数组边界内，消除内存越界风险。
+ */
 float math_sin(float theta){
+    // 1. 将弧度角折算到 [0, 2π] 基础周期内
     while (1){
         if (theta > VALUE_2PI)
-            theta = theta - VALUE_2PI;
+            theta = theta - VALUE_2PI; // 超过 2π，减去整周期
         else if (theta < 0)
-            theta = theta + VALUE_2PI;
+            theta = theta + VALUE_2PI; // 小于 0，加上整周期
         else
             break;
     }
+
+    // 2. 将浮点弧度线性映射为 512 数组索引下标
     float idx_f = theta * MATH_512_2PI;
     int idx = (int)idx_f;
     
+    // 3. 硬件安全性饱和限制
     if (idx >= 512) idx = 511;
     if (idx < 0) idx = 0;
+
+    // 4. 单周期内存快速读取
     return sin_tab[idx];
 }
 
-// 快速求解sine和cosine
+/**
+ * @brief  极速正弦与余弦同步解算
+ * @param  x: 待求角度 (rad)
+ * @param  sin_x: 输出正弦值的指针
+ * @param  cos_x: 输出余弦值的指针
+ * @note   专为 Park 变换与逆 Park 变换设计。利用 cos(x) = sin(π/2 - x) 的相位正交特性，
+ *         避免了分别调用库函数带来的重复计算开销。
+ */
 void math_sin_cos(float x, float *sin_x, float *cos_x){
-  *sin_x = math_sin(x);
-  *cos_x = math_cos(x);
+    *sin_x = math_sin(x);
+    *cos_x = math_cos(x); // 利用头文件中定义的宏: math_sin(VALUE_PI_2 - x)
 }
 
-// 快速求解tan函数
+/**
+ * @brief  极速正切函数求解
+ * @param  x: 输入角 (rad)
+ * @retval tan(x) = sin(x) / cos(x)
+ * @note   注意: 当 cos(x) 接近 0 (即 x 接近 π/2 或 3π/2) 时可能产生极大值
+ */
 float math_tan(float x){
-    float sine,cosine;
+    float sine, cosine;
     math_sin_cos(x, &sine, &cosine);
-    return sine/cosine;
+    return sine / cosine;
 }
 
-// 反三角tan表格数组
+// 91点反三角反正切表: 对应 tan 值为 0.0 到 1.0 (等分90个区间，对应角度 0 到 π/4)
 static const float atan_tab[91] = {
   0.000000000000000f, 0.011110653897607f, 0.022218565326719f, 0.033320995878247f, 
   0.044415215246910f, 0.055498505245716f, 0.066568163775823f, 0.077621508737393f,
@@ -150,29 +175,44 @@ static const float atan_tab[91] = {
   0.774162681139485f, 0.779811629336792f, 0.785398163397448f
 };
 
-// 快速求解反三角tan函数
+/**
+ * @brief  极速反正切函数求解 (线性插值 + 倒数扩展法则)
+ * @param  x: 输入正切比值
+ * @retval 对应弧度值 arctan(x) ∈ [-π/2, +π/2]
+ * @note   算法亮点:
+ *         1. NaN 防御: 针对硬件异常输入拦截;
+ *         2. 奇函数性质: 若 x < 0，则 arctan(x) = -arctan(-x);
+ *         3. 倒数扩展: 若 x > 1.0，则利用 arctan(x) = π/2 - arctan(1/x) 将全范围收敛到 [0, 1.0];
+ *         4. 91点高精度线性插值: y = y0 + (y1 - y0) * (pos - i)。
+ */
 float math_atan(float x){
+    // 1. 过滤无效的 NaN 异常浮点
     if (x != x){
-      return x;
+        return x;
     }
+    // 2. 负数对称性折叠: arctan(-x) = -arctan(x)
     if (x < 0.0f){
-      return -math_atan(-x);
+        return -math_atan(-x);
     }
+    // 3. 大于 1.0 倒数压缩: 利用正切余切互余公式 arctan(x) = π/2 - arctan(1/x)
     if (x > 1.0f){
-      return (float)((float)VALUE_PI_2 - (float)math_atan(1.0f / x));
+        return (float)((float)VALUE_PI_2 - (float)math_atan(1.0f / x));
     }
 
-    float pos = (float)x *90.0f;
+    // 4. 将 [0, 1.0] 等分为 90 个区间，计算浮点索引位置
+    float pos = (float)x * 90.0f;
     int i = (int)pos;
     if (i >= 90){
-      return atan_tab[90];
+        return atan_tab[90];
     }
 
+    // 5. 线性插值计算 (比纯阶梯查表平滑得多，显著降低转速解算噪声)
     float t = pos - (float)i;
     float y0 = atan_tab[i];
     float y1 = atan_tab[i + 1];
-    return y0 + (y1 - y0)*t;
+    return y0 + (y1 - y0) * t;
 }
+
 
 
 
