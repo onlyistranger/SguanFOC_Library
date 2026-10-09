@@ -48,7 +48,7 @@ title: "SguanFOC v4.0.0 核心源码函数级逐行深度解析教学指南"
 
 #### (1) `MAKE_MOTOR_FUNCS(n)` 宏生成函数群
 
-* **源码位置**：[`SguanFOC.c#L46-L63`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/SguanFOC.c)
+* **源码位置**：[`SguanFOC.c#L32-L51`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/SguanFOC.c)
 * **函数原型**：由宏批量生成 `static void high_loop_##n(void)`, `low_loop_##n(void)`, `main_loop_##n(void)`（$n \in [0, 5]$）
 * **入参与出参**：`void -> void`
 * **底层逻辑**：
@@ -63,7 +63,7 @@ title: "SguanFOC v4.0.0 核心源码函数级逐行深度解析教学指南"
 
 #### (2) `sguanfoc_high_loop(SguanFoc *sguan)`
 
-* **源码位置**：[`SguanFOC.c#L80-L113`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/SguanFOC.c)
+* **源码位置**：[`SguanFOC.c#L78-L108`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/SguanFOC.c)
 * **函数原型**：`static void sguanfoc_high_loop(SguanFoc *sguan)`
 * **参数说明**：`sguan`：当前执行的电机控制实例指针。
 * **业务逻辑**：根据编译期宏 `CONFIG_MOTOR`，若为单电机，直接调用 [`unitlib_main_high_loop(sguan)`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/UnitLib_main.c)；若为多电机，依据 `sguan->id_flag` 分发至 `unitlib_main_high_loop_one(sguan)` 到 `six(sguan)`。
@@ -71,20 +71,20 @@ title: "SguanFOC v4.0.0 核心源码函数级逐行深度解析教学指南"
 
 #### (3) `sguanfoc_low_loop(SguanFoc *sguan)`
 
-* **源码位置**：[`SguanFOC.c#L115-L117`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/SguanFOC.c)
+* **源码位置**：[`SguanFOC.c#L116-L118`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/SguanFOC.c)
 * **函数原型**：`static void sguanfoc_low_loop(SguanFoc *sguan)`
 * **业务逻辑**：转发至 [`unitlib_main_low_loop(sguan)`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/UnitLib_main.c)，执行状态机轮询、温度采集与低频故障保护。通常以 $100\text{Hz} \sim 1\text{kHz}$ 周期执行。
 
 #### (4) `sguanfoc_printf_loop(uint8_t *data, uint16_t length)`
 
-* **源码位置**：[`SguanFOC.c#L119-L126`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/SguanFOC.c)
+* **源码位置**：[`SguanFOC.c#L127-L136`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/SguanFOC.c)
 * **函数原型**：`static void sguanfoc_printf_loop(uint8_t *data, uint16_t length)`
 * **参数说明**：`data`：串口接收 DMA 缓冲区指针；`length`：本次接收字节数。
 * **业务逻辑**：内部维护静态标志 `count`，开机首次调用时触发 [`printf_rx_init()`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_printf.c) 初始化 DJB2 哈希表，随后调用 [`printf_rx_loop(data, length)`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_printf.c) 完成指令解析与参数注入。
 
 #### (5) `sguanfoc_main_loop(SguanFoc *sguan)`
 
-* **源码位置**：[`SguanFOC.c#L128-L161`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/SguanFOC.c)
+* **源码位置**：[`SguanFOC.c#L143-L171`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/SguanFOC.c)
 * **业务逻辑**：背景主循环派发器，分发给 `unitlib_main_main_loop(sguan)` 执行非实时后台任务。
 
 ---
@@ -95,7 +95,7 @@ title: "SguanFOC v4.0.0 核心源码函数级逐行深度解析教学指南"
 
 #### (1) `math_sin(float theta)`
 
-* **源码位置**：[`Sguan_math.c#L9-L24`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_math.c)
+* **源码位置**：[`Sguan_math.c#L103-L124`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_math.c)
 * **函数原型**：`float math_sin(float theta)`
 * **算法逻辑**：
   1. 周期归一化：通过 `while` 循环将 $\theta$ 限制在 $[0, 2\pi]$ 区间内：
@@ -114,18 +114,18 @@ title: "SguanFOC v4.0.0 核心源码函数级逐行深度解析教学指南"
 
 #### (2) `math_sin_cos(float x, float *sin_x, float *cos_x)`
 
-* **源码位置**：[`Sguan_math.c#L27-L30`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_math.c)
+* **源码位置**：[`Sguan_math.c#L134-L137`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_math.c)
 * **函数原型**：`void math_sin_cos(float x, float *sin_x, float *cos_x)`
 * **算法原理**：余弦利用三角恒等式 $\cos(x) = \sin(\frac{\pi}{2} - x)$，一次调用同时解算出正弦和余弦，专为 Park 变换及逆变换服务。
 
 #### (3) `math_tan(float x)`
 
-* **源码位置**：[`Sguan_math.c#L33-L37`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_math.c)
+* **源码位置**：[`Sguan_math.c#L145-L149`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_math.c)
 * **实现**：`return sine / cosine;`。注意需防范分母接近 0 的浮点除零异常。
 
 #### (4) `math_atan(float x)`
 
-* **源码位置**：[`Sguan_math.c#L67-L88`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_math.c)
+* **源码位置**：[`Sguan_math.c#L188-L214`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_math.c)
 * **函数原型**：`float math_atan(float x)`
 * **算法精妙推导**：
   1. NaN 异常拦截：`if (x != x) return x;`
@@ -148,7 +148,7 @@ title: "SguanFOC v4.0.0 核心源码函数级逐行深度解析教学指南"
 
 #### (1) `iqmath_from_float(SguanF f, SguanF base_value)`
 
-* **源码位置**：[`Sguan_IQmath.c#L16-L47`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_IQmath.c)
+* **源码位置**：[`Sguan_IQmath.c#L27-L64`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_IQmath.c)
 * **参数说明**：`f`：真实工程物理量（如 $12.5\text{A}$）；`base_value`：该物理量的基准基值（如电机额定最大电流 $20\text{A}$）。
 * **数学计算**：归一化为标幺值 $f_{pu} = f / base\_value \in [-1.0, +1.0)$，再乘以 $2^{31} = 2147483648$，并带有 `+0.5` / `-0.5` 四舍五入与溢出饱和钳位 (`Q31_MAX` / `Q31_MIN`)。
 
@@ -195,14 +195,14 @@ title: "SguanFOC v4.0.0 核心源码函数级逐行深度解析教学指南"
 
 #### `transfer_integrator_loop(Integrator *integrator)`
 
-* **源码位置**：[`Sguan_Transfer.c#L363-L380`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_Transfer.c)
+* **源码位置**：[`Sguan_Transfer.c#L356-L381`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_Transfer.c)
 * **实现逻辑**：前向梯形积分：
   $$y[k] = y[k-1] + \frac{T_s}{2}(u[k] + u[k-1])$$
   并内置上下限饱和限幅与历史重置接口 `transfer_reset_integrator(p)`。
 
 #### `transfer_derivative_loop(Derivative *derivative)`
 
-* **源码位置**：[`Sguan_Transfer.c#L400-L425`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_Transfer.c)
+* **源码位置**：[`Sguan_Transfer.c#L392-L432`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_Transfer.c)
 * **抗噪核心**：纯微分对高频高斯白噪声有极大的放大倍数，导致输出剧烈跳动。该模块实现为**不完全滤波微分**：
   $$G(s) = \frac{s}{\tau s + 1}$$
   高频增益被限制在 $1/\tau$，在提取微分趋势的同时抑制高频毛刺。
@@ -213,7 +213,7 @@ title: "SguanFOC v4.0.0 核心源码函数级逐行深度解析教学指南"
 
 #### (1) `transfer_lpf1_loop(Lpf1 *lpf)` 与 `transfer_lpf2_loop(Lpf2 *lpf)`
 
-* **源码位置**：[`Sguan_Transfer.c#L775-L880`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_Transfer.c)
+* **源码位置**：[`Sguan_Transfer.c#L784-L887`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_Transfer.c)
 * **算法实现**：
   * `Lpf1`：$G(s) = \frac{\omega_c}{s + \omega_c}$，经 Tustin 离散化后：
     $$a_0 = 2 + T_s \omega_c, \quad a_1 = -2 + T_s \omega_c, \quad b_0 = b_1 = T_s \omega_c$$
@@ -221,14 +221,14 @@ title: "SguanFOC v4.0.0 核心源码函数级逐行深度解析教学指南"
 
 #### (2) `transfer_nf_loop(Nf *nf)` (陷波滤波器)
 
-* **源码位置**：[`Sguan_Transfer.c#L1200-L1245`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_Transfer.c)
+* **源码位置**：[`Sguan_Transfer.c#L1199-L1247`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_Transfer.c)
 * **数学传函**：
   $$G(s) = \frac{s^2 + \omega_0^2}{s^2 + 2\zeta \omega_0 s + \omega_0^2}$$
 * **实战价值**：当机械臂或云台在某一频率（如 $200\text{Hz}$）发生强烈共振啸叫时，只需将 `nf->params.wo = 2 * PI * 200`，该滤波器在该频点增益骤降为零，彻底切断共振环路。
 
 #### (3) `transfer_sogi_loop(Sogi *sogi)` (二阶广义积分器)
 
-* **源码位置**：[`Sguan_Transfer.c#L1150-L1180`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_Transfer.c)
+* **源码位置**：[`Sguan_Transfer.c#L1157-L1181`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_Transfer.c)
 * **特性**：能够同时输出与输入信号同相位的带通信号 $v(t)$ 和严格正交滞后 $90^\circ$ 的积分信号 $qv(t)$，广泛用于单相无感观测器与不平衡电网锁相。
 
 ---
@@ -256,7 +256,7 @@ title: "SguanFOC v4.0.0 核心源码函数级逐行深度解析教学指南"
 
 ### 2. 核心函数解析：`motorstatus_loop(void *sguan)`
 
-* **源码位置**：[`Sguan_MotorStatus.c#L690-L855`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_MotorStatus.c)
+* **源码位置**：[`Sguan_MotorStatus.c#L470-L866`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_MotorStatus.c)
 * **函数原型**：`void motorstatus_loop(void *sguan)`
 * **执行全流程**：
   1. **遍历状态转移表 `motor_tab[196]`**：匹配当前状态 `p->motorstatus.status == motor_tab[i].status_now`；
@@ -287,17 +287,17 @@ title: "SguanFOC v4.0.0 核心源码函数级逐行深度解析教学指南"
 
 #### (1) `hash_compute(const char *str, uint8_t len)`
 
-* **源码位置**：[`Sguan_printf.c#L18-L24`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_printf.c)
+* **源码位置**：[`Sguan_printf.c#L27-L33`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_printf.c)
 * **算法**：经典 DJB2 字符串哈希，初始哈希种子 5381，逐字符左移 5 位并累加 (`hash * 33 + c`)。
 
 #### (2) `get_data_fast(uint8_t start_idx)`
 
-* **源码位置**：[`Sguan_printf.c#L31-L62`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_printf.c)
+* **源码位置**：[`Sguan_printf.c#L47-L82`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_printf.c)
 * **算法**：支持负号、浮点小数点的无依赖单遍扫描字符串转浮点函数。一旦遭遇非数字字符立刻终止，具备强抗干扰与防死机能力。
 
 #### (3) `printf_rx_loop(uint8_t *data, uint16_t length)`
 
-* **源码位置**：[`Sguan_printf.c#L119-L146`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_printf.c)
+* **源码位置**：[`Sguan_printf.c#L173-L200`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_printf.c)
 * **帧格式说明**：
   * 指令以键值对传输，例如：`Speed=1500.5?`
   * 自动过滤 `\r`, `\n`, 空格等噪声字符；
@@ -306,7 +306,7 @@ title: "SguanFOC v4.0.0 核心源码函数级逐行深度解析教学指南"
 
 #### (4) `printf_tx_init(Printf *str)`
 
-* **源码位置**：[`Sguan_printf.c#L100-L105`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_printf.c)
+* **源码位置**：[`Sguan_printf.c#L136-L141`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_printf.c)
 * **帧尾定义**：JustFloat 虚拟示波器协议标准帧尾：`0x00, 0x00, 0x80, 0x7F`（即单精度浮点数 NaN 标识符）。后接 10 通道浮点数据，上位机以极高帧率接收并实时绘图。
 
 ---

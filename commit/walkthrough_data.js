@@ -16,8 +16,8 @@ window.WALKTHROUGH_DATA = {
         {
           "id": "macro_dispatch",
           "title": "GENERATE_MOTOR_LOOPS(n) X-Macro 多轴元编程展开器",
-          "startLine": 27,
-          "endLine": 75,
+          "startLine": 15,
+          "endLine": 69,
           "category": "algorithm",
           "categoryName": "核心机制",
           "tag": "X-Macro / 零开销多轴派发",
@@ -25,16 +25,20 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "宏编译期展开 -> 自动生成 high_loop_n / low_loop_n -> 绑定各轴 SguanFoc 实例 -> 注册至全局分发跳表",
           "lineByLine": [
             {
-              "lines": "27-36",
-              "desc": "定义 GENERATE_MOTOR_LOOPS(n) 宏，声明各电机专有的 high_loop_##n, low_loop_##n 与 main_loop_##n 静态函数原型。"
+              "lines": "15-28",
+              "desc": "宏拼接助手 CONCAT 与 EXPAND_MOTOR 自动匹配当前轴数定义 MOTOR_LIST。"
             },
             {
-              "lines": "38-51",
-              "desc": "在宏内部实现电机 n 的高频中断执行体，将该轴实例指针传入 sguanfoc_high_loop(p)，实现零额外开销内联化。"
+              "lines": "32-51",
+              "desc": "MAKE_MOTOR_FUNCS(n) 宏批量自动生成每个电机的 high_loop_n, low_loop_n, main_loop_n 实例函数。"
             },
             {
-              "lines": "53-75",
-              "desc": "SguanFOC_Init 遍历所有电机轴，依次初始化各轴参数、绑定控制句柄并触发硬件外设启动。"
+              "lines": "53-56",
+              "desc": "批量调用宏展开生成函数定义。"
+            },
+            {
+              "lines": "59-69",
+              "desc": "初始化全局电机控制对象数组 sguanfoc[CONFIG_MOTOR]，绑定各电机函数指针与 ID。"
             }
           ],
           "math": [
@@ -61,7 +65,7 @@ window.WALKTHROUGH_DATA = {
           "id": "high_loop",
           "title": "sguanfoc_high_loop() 高频 PWM 中断控制核心流水线",
           "startLine": 78,
-          "endLine": 114,
+          "endLine": 108,
           "category": "algorithm",
           "categoryName": "核心算法",
           "tag": "高频环 / 20kHz 电流闭环",
@@ -69,20 +73,16 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "读取编码器/电角度 -> 读取相电流 -> Clarke 变换 -> Park 变换 -> DQ 轴 PID 闭环 -> 反 Park 变换 -> SVPWM 调制 -> 更新三相 PWM 寄存器",
           "lineByLine": [
             {
-              "lines": "78-85",
-              "desc": "获取当前电机的机械/电角度与三相电流 ADC 原始值，完成零偏扣除与标幺化转换。"
+              "lines": "78-80",
+              "desc": "函数入口及多轴配置分支编译判定。"
             },
             {
-              "lines": "86-93",
-              "desc": "执行 Clarke 变换与 Park 变换，将定子三相静止坐标系 (Ia, Ib, Ic) 解耦为旋转直角坐标系 (Id, Iq)。"
+              "lines": "81-103",
+              "desc": "多轴模式下依据 sguan->id_flag 路由至对应电机的专有高频控制环 (unitlib_main_high_loop_one ~ six)。"
             },
             {
-              "lines": "94-102",
-              "desc": "Id/Iq 环 PID 控制器根据目标电流计算 d 轴与 q 轴所需补偿的输出控制电压 Ud 与 Uq。"
-            },
-            {
-              "lines": "103-114",
-              "desc": "通过反 Park 变换还原至静止坐标系 Ualpha/Ubeta，调用 transfer_svpwm_loop 计算三相比较寄存器计数值并写入硬件定时器。"
+              "lines": "104-108",
+              "desc": "单轴配置模式，直接内联调用统一高频控制环 unitlib_main_high_loop，消除分支跳转延迟。"
             }
           ],
           "math": [
@@ -113,7 +113,7 @@ window.WALKTHROUGH_DATA = {
           "id": "low_loop",
           "title": "sguanfoc_low_loop() 低频速度/位置与遥测处理循环",
           "startLine": 116,
-          "endLine": 125,
+          "endLine": 118,
           "category": "fsm",
           "categoryName": "外环控制",
           "tag": "低频环 / 1kHz 速度位置外环",
@@ -121,12 +121,8 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "累加机械角度增量 -> 计算微分角速度 -> 滤波平滑 -> 速度/位置外环 PID -> 输出目标 Iq 给定",
           "lineByLine": [
             {
-              "lines": "116-120",
-              "desc": "计算当前周期的机械角位移差值，通过低通滤波或 PLL 估算当前电机的实际机械转速 (rad/s 或 rpm)。"
-            },
-            {
-              "lines": "121-125",
-              "desc": "根据当前运动控制模式 (速度模式/位置模式)，调用对应的 PID 计算，将其饱和输出作为高频电流环的 Iq_ref。"
+              "lines": "116-118",
+              "desc": "转发至 unitlib_main_low_loop 执行状态机、慢速传感器遥测与保护检测。"
             }
           ],
           "math": [
@@ -148,7 +144,7 @@ window.WALKTHROUGH_DATA = {
           "id": "printf_loop",
           "title": "sguanfoc_printf_loop() 串口协议帧处理与指令分发",
           "startLine": 127,
-          "endLine": 141,
+          "endLine": 136,
           "category": "hardware",
           "categoryName": "通信协议",
           "tag": "DJB2 哈希 / 示波器遥测",
@@ -157,11 +153,11 @@ window.WALKTHROUGH_DATA = {
           "lineByLine": [
             {
               "lines": "127-133",
-              "desc": "校验接收数据长度与非空合法性，将数据指针送入底层协议解析模块。"
+              "desc": "懒加载单例模式：首次接收串口数据时触发 printf_rx_init 初始化哈希表。"
             },
             {
-              "lines": "134-141",
-              "desc": "调用 printf_rx_loop 执行快速 ASCII 转换与哈希比对，实时生效调试指令。"
+              "lines": "134-136",
+              "desc": "调用 printf_rx_loop 执行数据流解包与哈希指令匹配派发。"
             }
           ],
           "pitfalls": [
@@ -185,16 +181,12 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "轮询硬件母线/温度 -> 检查电流超限 -> 计算状态机转移事件 -> 调度对应状态执行体",
           "lineByLine": [
             {
-              "lines": "143-152",
-              "desc": "读取母线电压 Vbus、相电流峰值与传感器探针温度，进行安全阈值比对。"
+              "lines": "143-165",
+              "desc": "多轴非实时后台任务路由分发 (unitlib_main_main_loop_one ~ six)。"
             },
             {
-              "lines": "153-162",
-              "desc": "调用 motorstatus_loop() 驱动状态机自推进，完成由 STANDBY -> READY -> RUNNING 的有序迁移。"
-            },
-            {
-              "lines": "163-171",
-              "desc": "若检测到欠压、过温或相线接触不良，立即关闭三相 PWM 输出并锁定故障码。"
+              "lines": "166-171",
+              "desc": "单轴后台任务统一执行体 unitlib_main_main_loop。"
             }
           ],
           "pitfalls": [
@@ -224,8 +216,8 @@ window.WALKTHROUGH_DATA = {
         {
           "id": "sin_tab",
           "title": "sin_tab[512] 512 点等间隔高精度正弦查找表",
-          "startLine": 10,
-          "endLine": 101,
+          "startLine": 7,
+          "endLine": 93,
           "category": "algorithm",
           "categoryName": "核心算法",
           "tag": "三角查找表 / 单周期执行",
@@ -233,16 +225,8 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "离散化 512 点等分弧度 -> 预存入 Flash/ROM 表 -> 运行时按相位步长寻址",
           "lineByLine": [
             {
-              "lines": "10-25",
-              "desc": "第一象限 $0 \\sim \\pi/2$ 样点分布，数值从 0.0 单调递增至 1.0。"
-            },
-            {
-              "lines": "26-55",
-              "desc": "第二与第三象限样点，保持严格的浮点精度与零点对称性。"
-            },
-            {
-              "lines": "56-101",
-              "desc": "第四象限样点平滑过渡回 $2\\pi$，保证正弦曲线全周期连续无畸变。"
+              "lines": "7-93",
+              "desc": "512 点等间隔高精度正弦查找表常量数组定义，精度达 1e-7。"
             }
           ],
           "math": [
@@ -264,7 +248,7 @@ window.WALKTHROUGH_DATA = {
           "id": "math_sin",
           "title": "math_sin() 快速浮点正弦函数与相位折叠归一化",
           "startLine": 103,
-          "endLine": 132,
+          "endLine": 124,
           "category": "algorithm",
           "categoryName": "核心算法",
           "tag": "相位环绕 / 快速查表",
@@ -273,15 +257,15 @@ window.WALKTHROUGH_DATA = {
           "lineByLine": [
             {
               "lines": "103-112",
-              "desc": "对输入角做跨周折叠与正值平移，确保落在 $[0, 2\\pi)$ 周期内。"
+              "desc": "弧度角折算归一化至 [0, 2π] 基础周期。"
             },
             {
-              "lines": "113-125",
-              "desc": "利用乘法因子 `512.0f / (2 * PI)` 将弧度快速映射为整数索引，做 0~511 上下限保护。"
+              "lines": "113-121",
+              "desc": "弧度到 512 查表索引线性映射 (MATH_512_2PI) 与边界饱和限制。"
             },
             {
-              "lines": "126-132",
-              "desc": "直接从 sin_tab 取值返回，免去任何耗时的三角级数展开计算。"
+              "lines": "122-124",
+              "desc": "单周期内存读取并返回正弦值。"
             }
           ],
           "math": [
@@ -303,7 +287,7 @@ window.WALKTHROUGH_DATA = {
           "id": "math_sin_cos",
           "title": "math_sin_cos() 正交双通道快速计算与 90° 移相优化",
           "startLine": 134,
-          "endLine": 143,
+          "endLine": 137,
           "category": "algorithm",
           "categoryName": "核心算法",
           "tag": "正余弦同步 / Park 变换基石",
@@ -311,12 +295,8 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "输入弧度 x -> 计算 sin(x) -> 相位平移 90 度 -> 计算 cos(x) -> 双指针同步输出",
           "lineByLine": [
             {
-              "lines": "134-138",
-              "desc": "函数接收输入角度 x 与两个输出浮点指针 sin_x, cos_x。"
-            },
-            {
-              "lines": "139-143",
-              "desc": "利用恒等式 $\\cos(x) = \\sin(x + \\pi/2)$，通过调整查表偏移量直接输出正余弦。"
+              "lines": "134-137",
+              "desc": "正交双通道快速计算，利用 cos(x) = sin(π/2 - x) 移相消除重复计算开销。"
             }
           ],
           "math": [
@@ -338,7 +318,7 @@ window.WALKTHROUGH_DATA = {
           "id": "math_tan",
           "title": "math_tan() 快速正切运算与奇点防除零保护",
           "startLine": 145,
-          "endLine": 186,
+          "endLine": 149,
           "category": "algorithm",
           "categoryName": "核心算法",
           "tag": "正切 / 奇点抑制",
@@ -346,16 +326,8 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "调用 math_sin_cos(x) -> 检查 cos(x) 模长 -> 若接近 0 则钳位输出极值 -> 否则返回 sin/cos",
           "lineByLine": [
             {
-              "lines": "145-155",
-              "desc": "获取当前角正弦与余弦分量。"
-            },
-            {
-              "lines": "156-170",
-              "desc": "判断余弦分量是否落在零点阈值 `[-1e-6, 1e-6]` 内，若是则根据符号饱和输出最大允许值。"
-            },
-            {
-              "lines": "171-186",
-              "desc": "常规区间执行除法并返回正切值。"
+              "lines": "145-149",
+              "desc": "快速正切运算，调用 math_sin_cos 获取正弦与余弦，返回商值 (tan = sin / cos)。"
             }
           ],
           "math": [
@@ -376,8 +348,8 @@ window.WALKTHROUGH_DATA = {
         {
           "id": "math_atan",
           "title": "math_atan() 91 点分段线性插值快速反正切运算",
-          "startLine": 188,
-          "endLine": 219,
+          "startLine": 152,
+          "endLine": 214,
           "category": "algorithm",
           "categoryName": "核心算法",
           "tag": "反正切 / 线性插值",
@@ -385,16 +357,20 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "利用对称性压缩至 [0, 1] 区间 -> 查表获取两相邻端点值 -> 线性内插获得高精度角度 -> 还原象限",
           "lineByLine": [
             {
+              "lines": "152-176",
+              "desc": "91 点反正切表常量数组定义 (atan_tab[91])。"
+            },
+            {
               "lines": "188-196",
-              "desc": "处理负数输入，利用奇函数性质 $\\arctan(-x) = -\\arctan(x)$ 映射至正数区。"
+              "desc": "过滤 NaN 异常与负数对称性折叠 arctan(-x) = -arctan(x)。"
             },
             {
-              "lines": "197-205",
-              "desc": "若 $x > 1$，利用补角公式 $\\arctan(x) = \\frac{\\pi}{2} - \\arctan(1/x)$ 映射至 $[0, 1]$ 紧致区间。"
+              "lines": "197-201",
+              "desc": "若 x > 1.0，利用倒数互余公式 arctan(x) = π/2 - arctan(1/x) 压缩至 [0, 1.0]。"
             },
             {
-              "lines": "206-219",
-              "desc": "在 $[0, 1]$ 内以 90 等分检索表项，采用公式 $y = y_0 + (y_1 - y_0) \\cdot dx$ 计算线性插值输出。"
+              "lines": "202-214",
+              "desc": "线性插值计算 (y = y0 + (y1 - y0) * t)，显著平滑角度与转速解算噪声。"
             }
           ],
           "math": [
@@ -435,7 +411,7 @@ window.WALKTHROUGH_DATA = {
           "id": "q31_convert",
           "title": "iqmath_q31_from_float() / to_float() 浮点与标幺定点双向转换",
           "startLine": 27,
-          "endLine": 86,
+          "endLine": 81,
           "category": "algorithm",
           "categoryName": "核心机制",
           "tag": "Q31 定点 / 标幺化",
@@ -448,15 +424,15 @@ window.WALKTHROUGH_DATA = {
             },
             {
               "lines": "37-49",
-              "desc": "将物理量归一化到 $[-1.0, 1.0)$ 区间，乘以 $2147483648.0$ 放大为高精度定点基。"
+              "desc": "标幺化计算与边界硬饱和截断，定点缩放至 Q31 基。"
             },
             {
               "lines": "50-64",
-              "desc": "根据正负号实施精确四舍五入舍入补偿，防止连续截断误差累加，并做最大/最小饱和钳位。"
+              "desc": "精确四舍五入修正与 64 位溢出饱和钳位。"
             },
             {
-              "lines": "72-86",
-              "desc": "to_float 函数反向乘以倒数常数与 base_value，还原为工程物理量。"
+              "lines": "72-81",
+              "desc": "iqmath_q31_to_float 反向还原为真实工程物理量。"
             }
           ],
           "math": [
@@ -478,7 +454,7 @@ window.WALKTHROUGH_DATA = {
           "id": "q31_add_sub",
           "title": "iqmath_q31_add() & sub() 工业级防溢出饱和加减法",
           "startLine": 89,
-          "endLine": 110,
+          "endLine": 111,
           "category": "algorithm",
           "categoryName": "核心机制",
           "tag": "饱和算术 / 溢出保护",
@@ -486,16 +462,12 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "常规 32 位加减 -> 检测符号翻转异常 -> 触发饱和钳位 -> 输出安全数值",
           "lineByLine": [
             {
-              "lines": "89-95",
-              "desc": "两正数相加若结果小于等于 0，说明发生向上溢出，强制截断并返回 `Q31_MAX (0x7FFFFFFF)`。"
+              "lines": "89-100",
+              "desc": "Q31 定点饱和加法：正/负溢出检测与边界钳位。"
             },
             {
-              "lines": "96-101",
-              "desc": "两负数相加若结果大于等于 0，说明发生向下溢出，强制截断并返回 `Q31_MIN (-0x80000000)`。"
-            },
-            {
-              "lines": "102-110",
-              "desc": "sub 减法同样检测正减负或负减正时的符号翻转并实施极限饱和。"
+              "lines": "102-111",
+              "desc": "Q31 定点饱和减法：符号翻转溢出检测与边界钳位。"
             }
           ],
           "math": [
@@ -530,7 +502,7 @@ window.WALKTHROUGH_DATA = {
             },
             {
               "lines": "118-125",
-              "desc": "对特殊边界 `(-1.0) * (-1.0)` 进行检查，防止溢出越界，安全返回。"
+              "desc": "对特殊边界 (-1.0) * (-1.0) 进行检查，防止溢出越界，安全返回。"
             }
           ],
           "math": [
@@ -591,7 +563,7 @@ window.WALKTHROUGH_DATA = {
           "id": "q31_convert_base",
           "title": "iqmath_q31_convert_base() 跨物理量基准动态定标重投影",
           "startLine": 152,
-          "endLine": 178,
+          "endLine": 177,
           "category": "algorithm",
           "categoryName": "核心机制",
           "tag": "跨基准重投影 / 标幺重映射",
@@ -603,8 +575,8 @@ window.WALKTHROUGH_DATA = {
               "desc": "合法性检验，若两基准之差小于 1e-6 直接原样返回，零开销退出。"
             },
             {
-              "lines": "161-178",
-              "desc": "按比例 `ratio = old_base / new_base` 进行定点值重缩放，带正负四舍五入与范围钳位。"
+              "lines": "161-177",
+              "desc": "按比例 ratio = old_base / new_base 进行定点值重缩放，带正负四舍五入与范围钳位。"
             }
           ],
           "math": [
@@ -634,11 +606,11 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "输入 Q31 弧度 -> 乘以定点缩放比 SIN_K_q31 -> 右移 31 位获得索引 -> 查表返回 Q31",
           "lineByLine": [
             {
-              "lines": "491-510",
+              "lines": "491-506",
               "desc": "fast_sin 处理负数角镜像映射，通过定点乘法提取 0~511 表索引。"
             },
             {
-              "lines": "511-521",
+              "lines": "511-519",
               "desc": "fast_cos 叠加 90 度定点弧度偏移后直接复用 fast_sin。"
             },
             {
@@ -1138,7 +1110,7 @@ window.WALKTHROUGH_DATA = {
           "id": "status_initializers",
           "title": "motorstatus_idle_init() 及 12 大硬件故障保护初始化子程序",
           "startLine": 16,
-          "endLine": 105,
+          "endLine": 103,
           "category": "protection",
           "categoryName": "故障保护",
           "tag": "安全保护 / 故障停机",
@@ -1155,10 +1127,10 @@ window.WALKTHROUGH_DATA = {
             },
             {
               "lines": "59-88",
-              "desc": "电机与驱动器超温保护：温度达到热熔断限值时降低额定输出功率或切断电源。"
+              "desc": "电机与驱动器多点超温保护：温度达到热熔断限值时降低额定输出功率或切断电源。"
             },
             {
-              "lines": "89-105",
+              "lines": "89-103",
               "desc": "堵转 (Stuck) 与缺相 (Phase Loss) 保护：检测转子卡死或接线松脱，切断持续短路相电流。"
             }
           ],
@@ -1175,7 +1147,7 @@ window.WALKTHROUGH_DATA = {
           "id": "fsm_jumptable",
           "title": "motorstatus_initial_init[] 与 motorstatus_action_loop[] 状态跳转表",
           "startLine": 373,
-          "endLine": 435,
+          "endLine": 436,
           "category": "fsm",
           "categoryName": "状态机架构",
           "tag": "函数指针跳转表 / O(1) 调度",
@@ -1187,7 +1159,7 @@ window.WALKTHROUGH_DATA = {
               "desc": "motorstatus_initial_init[] 数组存储各状态的一次性 Entry 函数指针。"
             },
             {
-              "lines": "406-435",
+              "lines": "406-436",
               "desc": "motorstatus_action_loop[] 数组存储各状态的周期性 Do 动作函数指针。"
             }
           ],
@@ -1210,7 +1182,7 @@ window.WALKTHROUGH_DATA = {
           "id": "fsm_engine",
           "title": "motorstatus_loop() 有限状态机主决策与状态转移推进引擎",
           "startLine": 470,
-          "endLine": 550,
+          "endLine": 534,
           "category": "fsm",
           "categoryName": "状态机架构",
           "tag": "状态转移矩阵 / 事件自推进",
@@ -1218,16 +1190,12 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "查询 run_flag 运行信号 -> 检查传感器就绪与标定完成 -> 触发 IDLE -> READY -> RUNNING 状态跃迁",
           "lineByLine": [
             {
-              "lines": "470-495",
-              "desc": "解析 motorstatus_event_get 运行事件，决定是否唤醒待机状态进入自检与校准。"
+              "lines": "470-500",
+              "desc": "解析上电自检、零位校准与就绪状态迁移 (event_ready / initializing / success)。"
             },
             {
-              "lines": "496-525",
-              "desc": "对比当前状态与目标未来状态 (status_future)，检测到跃迁时执行 Exit -> Entry 生命周期回调。"
-            },
-            {
-              "lines": "526-550",
-              "desc": "刷新状态持续计时器 tick_last，调度当前状态的 action 周期体。"
+              "lines": "501-534",
+              "desc": "待机停机与恢复迁移处理 (event_standby0 / event_standby1)。"
             }
           ],
           "pitfalls": [
@@ -1240,49 +1208,10 @@ window.WALKTHROUGH_DATA = {
           "extensions": "状态机全面支持从任意运行状态以最高优先级瞬间打断跳转至 FAULT 保护状态。"
         },
         {
-          "id": "stuck_and_protection",
-          "title": "堵转检测、相电流异常与多级超温安全熔断机制",
-          "startLine": 551,
-          "endLine": 750,
-          "category": "protection",
-          "categoryName": "安全防护",
-          "tag": "堵转检测 / 过载反时限",
-          "summary": "当系统向电机注入了接近额定的 q 轴电流力矩持续超过设定时间，但编码器检测到的转速仍持续接近于零时，判定电机发生机械堵转并切断动力输出。",
-          "pipeline": "监测转矩电流 Iq > 阈值 -> 监测速度 < 极小死区 -> 启动持续时间计时累加 -> 超过安全限值触发 STUCK 报警",
-          "lineByLine": [
-            {
-              "lines": "551-590",
-              "desc": "转矩电流与目标阈值比对，若负载过重进入堵转风险监视窗。"
-            },
-            {
-              "lines": "591-645",
-              "desc": "读取实际速度绝对值，若转速长期低于最小阈值则累加堵转计时器。"
-            },
-            {
-              "lines": "646-750",
-              "desc": "多级超温反时限监控：轻度超温限制最大输出电流，重度超温强制刹车关机。"
-            }
-          ],
-          "math": [
-            {
-              "label": "堵转判定逻辑",
-              "formula": "\\text{Stuck} = (|i_q| > I_{stuck\\_th}) \\land (|\\omega_m| < \\Omega_{stuck\\_th}) \\land (\\Delta t > T_{stuck\\_limit})"
-            }
-          ],
-          "pitfalls": [
-            {
-              "type": "TIP",
-              "title": "低速大扭矩工况防误判",
-              "text": "在挤压抓取或重力吊升等特定低速工况下，需通过上位机指令适当放宽堵转判定超时窗口，以兼顾安全性与作业持续度。"
-            }
-          ],
-          "extensions": "保护机制完全符合工业伺服驱动器的安全等级规范。"
-        },
-        {
           "id": "arrival_deadband",
           "title": "位置到达死区窗口 (Arrival Deadband) 与恒速保持判定",
-          "startLine": 751,
-          "endLine": 866,
+          "startLine": 535,
+          "endLine": 705,
           "category": "fsm",
           "categoryName": "外环控制",
           "tag": "到达判定 / 锁轴消抖",
@@ -1290,16 +1219,16 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "计算位置误差 |pos_real - pos_target| -> 判定是否进入死区 -> 检查当前角速度 -> 状态切入 HOLD",
           "lineByLine": [
             {
-              "lines": "751-785",
-              "desc": "提取位置目标与实际位置绝对误差，比对预设到达门限 pos_target_min。"
+              "lines": "535-590",
+              "desc": "转矩模式保持与斜坡加减速事件推进。"
             },
             {
-              "lines": "786-825",
-              "desc": "检查速度是否降至零速窗口内，避免在高速穿过目标点的一瞬间发生误判定。"
+              "lines": "591-648",
+              "desc": "速度模式保持与加减速事件推进。"
             },
             {
-              "lines": "826-866",
-              "desc": "完成状态更新并切换至 HOLD 保持状态，启用刚性抗扰算法锁住轴位。"
+              "lines": "649-705",
+              "desc": "位置伺服模式下的死区到达窗口 (pos_target_min ~ pos_target_max) 判定与进入锁定。"
             }
           ],
           "math": [
@@ -1316,6 +1245,49 @@ window.WALKTHROUGH_DATA = {
             }
           ],
           "extensions": "就位信号可通过硬件引脚输出电平告知外部 PLC 控制器机械手已抓取对中。"
+        },
+        {
+          "id": "stuck_and_protection",
+          "title": "堵转检测、相电流异常与多级超温安全熔断机制",
+          "startLine": 707,
+          "endLine": 845,
+          "category": "protection",
+          "categoryName": "安全防护",
+          "tag": "堵转检测 / 过载反时限",
+          "summary": "当系统向电机注入了接近额定的 q 轴电流力矩持续超过设定时间，但编码器检测到的转速仍持续接近于零时，判定电机发生机械堵转并切断动力输出。",
+          "pipeline": "监测转矩电流 Iq > 阈值 -> 监测速度 < 极小死区 -> 启动持续时间计时累加 -> 超过安全限值触发 STUCK 报警",
+          "lineByLine": [
+            {
+              "lines": "707-725",
+              "desc": "母线电压超限监控 (过压 / 欠压瞬态切断)。"
+            },
+            {
+              "lines": "727-750",
+              "desc": "即时峰值过流与持续过载延时积分双重电流硬保护。"
+            },
+            {
+              "lines": "752-810",
+              "desc": "电机、驱动管与控制板多路 NTC 温度保护判定。"
+            },
+            {
+              "lines": "812-845",
+              "desc": "编码器测速与大转矩关联判定机械堵转，以及三相缺相告警停机。"
+            }
+          ],
+          "math": [
+            {
+              "label": "堵转判定逻辑",
+              "formula": "\\text{Stuck} = (|i_q| > I_{stuck\\_th}) \\land (|\\omega_m| < \\Omega_{stuck\\_th}) \\land (\\Delta t > T_{stuck\\_limit})"
+            }
+          ],
+          "pitfalls": [
+            {
+              "type": "TIP",
+              "title": "低速大扭矩工况防误判",
+              "text": "在挤压抓取或重力吊升等特定低速工况下，需通过上位机指令适当放宽堵转判定超时窗口，以兼顾安全性与作业持续度。"
+            }
+          ],
+          "extensions": "保护机制完全符合工业伺服驱动器的安全等级规范。"
         }
       ]
     },
@@ -1336,7 +1308,7 @@ window.WALKTHROUGH_DATA = {
           "id": "djb2_hash",
           "title": "hash_compute() DJB2 32 位字符串哈希算法",
           "startLine": 27,
-          "endLine": 45,
+          "endLine": 33,
           "category": "algorithm",
           "categoryName": "核心算法",
           "tag": "DJB2 哈希 / O(1) 指令比对",
@@ -1344,15 +1316,15 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "接收字符串流 -> 初始 hash=5381 -> 逐字节左移 5 位并自加加权 -> 输出 uint32_t 哈希值",
           "lineByLine": [
             {
-              "lines": "27-32",
+              "lines": "27-28",
               "desc": "初始化哈希累加寄存器为魔数 5381。"
             },
             {
-              "lines": "33-40",
-              "desc": "遍历指令字符串所有有效字符，按位移运算混合更新哈希值。"
+              "lines": "29-31",
+              "desc": "遍历指令字符串所有有效字符，按 ((hash << 5) + hash) + str[i] 混合更新。"
             },
             {
-              "lines": "41-45",
+              "lines": "32-33",
               "desc": "返回 32 位哈希指纹，供后续快速表项比对。"
             }
           ],
@@ -1375,7 +1347,7 @@ window.WALKTHROUGH_DATA = {
           "id": "fast_float_parser",
           "title": "get_data_fast() 零内存分配单遍快速 ASCII 浮点解析器",
           "startLine": 47,
-          "endLine": 93,
+          "endLine": 82,
           "category": "algorithm",
           "categoryName": "核心算法",
           "tag": "单遍扫描 / 免 atof 浮点解析",
@@ -1391,8 +1363,8 @@ window.WALKTHROUGH_DATA = {
               "desc": "累加整数部分：数值乘以 10 并加上当前字符数值。"
             },
             {
-              "lines": "76-93",
-              "desc": "若遇到小数点 '.'，逐位除以 10 累加至小数值，最终合成浮点数返回。"
+              "lines": "76-82",
+              "desc": "若遇到小数点 '.' 累加小数，遇到非法字符熔断截断并返回浮点结果。"
             }
           ],
           "math": [
@@ -1414,7 +1386,7 @@ window.WALKTHROUGH_DATA = {
           "id": "cmd_adjust",
           "title": "printf_adjust() 指令哈希查表与参数实时注入分发",
           "startLine": 95,
-          "endLine": 134,
+          "endLine": 126,
           "category": "hardware",
           "categoryName": "通信协议",
           "tag": "指令分发 / 参数动态热重载",
@@ -1422,16 +1394,16 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "计算接收字符串等号前命令哈希 -> 匹配预建字典 cmd_dict -> 提取浮点参数 -> 注入对应控制器",
           "lineByLine": [
             {
-              "lines": "95-104",
-              "desc": "在缓冲区中寻找赋值分隔符 '='。"
+              "lines": "95-103",
+              "desc": "在缓冲区中寻找赋值分隔符 '='，确定 Key 长度。"
             },
             {
-              "lines": "105-115",
-              "desc": "调用 get_data_fast 提取数值，调用 hash_compute 提取命令哈希。"
+              "lines": "104-109",
+              "desc": "提取浮点数值并计算接收 Key 的 DJB2 哈希值。"
             },
             {
-              "lines": "116-134",
-              "desc": "遍历字典数组，命中后调用对应的处理回调 (如修改 speed_target 或 Kp/Ki)。"
+              "lines": "110-126",
+              "desc": "遍历字典数组比较哈希值，命中后调用对应的控制回调注入参数。"
             }
           ],
           "pitfalls": [
@@ -1446,8 +1418,8 @@ window.WALKTHROUGH_DATA = {
         {
           "id": "justfloat_tx",
           "title": "printf_tx_loop() JustFloat 协议帧封包与高频示波器推流",
-          "startLine": 147,
-          "endLine": 155,
+          "startLine": 136,
+          "endLine": 150,
           "category": "hardware",
           "categoryName": "虚拟示波器",
           "tag": "JustFloat / 帧尾同步 0x00 0x00 0x80 0x7F",
@@ -1455,12 +1427,12 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "收集各监控通道浮点数 -> 拷贝入发送缓冲 -> 附加标准帧尾 0x7F800000 -> 启动串口 DMA 发送",
           "lineByLine": [
             {
-              "lines": "147-150",
-              "desc": "将多路遥测变量连续填入以 float (4字节 IEEE754) 排布的发送缓冲区。"
+              "lines": "136-141",
+              "desc": "初始化 JustFloat 协议标准尾同步字 0x00, 0x00, 0x80, 0x7F (单精度浮点数 NaN 编码)。"
             },
             {
-              "lines": "151-155",
-              "desc": "在数据包末尾添加 `0x00, 0x00, 0x80, 0x7F` (浮点 NaN 帧尾标记) 并触发硬件发送。"
+              "lines": "147-150",
+              "desc": "虚拟示波器周期性推流回调钩子。"
             }
           ],
           "math": [
@@ -1491,15 +1463,15 @@ window.WALKTHROUGH_DATA = {
           "lineByLine": [
             {
               "lines": "173-182",
-              "desc": "校验接收长度，拷贝字符至接收缓存区 sguan_printfbuff。"
+              "desc": "过滤回车、换行、空格等无效字符，写入接收缓冲区。"
             },
             {
-              "lines": "183-192",
-              "desc": "遇到问号 '?' 或换行时，触发 printf_adjust 解释并清零接收索引。"
+              "lines": "183-191",
+              "desc": "遇到终结符 '?' 触发 printf_adjust() 命令解析并重置指针。"
             },
             {
-              "lines": "193-200",
-              "desc": "防止缓冲区溢出越界覆盖，提供安全边界截断保护。"
+              "lines": "192-200",
+              "desc": "超过 40 字节无终止符判定为粘包残帧，强制清空重置。"
             }
           ],
           "pitfalls": [
@@ -1530,7 +1502,7 @@ window.WALKTHROUGH_DATA = {
           "id": "main_stage_inits",
           "title": "unitlib_main_standby_init() ~ goinit1_current_init() 上电自检与零位校准流",
           "startLine": 13,
-          "endLine": 68,
+          "endLine": 64,
           "category": "fsm",
           "categoryName": "系统引导",
           "tag": "开机标定 / 偏置校准",
@@ -1538,20 +1510,20 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "上电 STANDBY -> READY -> 自检 -> d 轴强特定向对齐零位 -> 静默采集 ADC 运放静态偏置 -> 进入闭环准备",
           "lineByLine": [
             {
-              "lines": "13-31",
+              "lines": "13-25",
               "desc": "待机与就绪初始化，配置初始参数与安全阻抗。"
             },
             {
-              "lines": "32-44",
-              "desc": "INITIALIZING 阶段，挂载各轴电机底层驱动句柄。"
+              "lines": "32-37",
+              "desc": "INITIALIZING 阶段，硬件自检并置位 RUN_SUCCESS。"
             },
             {
-              "lines": "45-60",
-              "desc": "GOINIT0 阶段：向 d 轴注入直流偏置电压迫使转子磁极锁定在 0 度，以此记录编码器机械物理零位偏移。"
+              "lines": "45-53",
+              "desc": "GOINIT0 阶段：向 d 轴注入直流偏置电压迫使转子磁极对齐，标定编码器机械物理零位偏移。"
             },
             {
-              "lines": "61-68",
-              "desc": "GOINIT1 阶段：在 PWM 关闭状态下连续采样百次 ADC，计算相电流运放静态漂移基准。"
+              "lines": "61-64",
+              "desc": "GOINIT1 阶段：相电流运放静态偏置校准，就绪后进入正式运行。"
             }
           ],
           "pitfalls": [
@@ -1567,7 +1539,7 @@ window.WALKTHROUGH_DATA = {
           "id": "main_high_loop",
           "title": "unitlib_main_high_loop() 多轴高频电流环协同分发",
           "startLine": 70,
-          "endLine": 112,
+          "endLine": 100,
           "category": "algorithm",
           "categoryName": "核心机制",
           "tag": "多轴高频 / 周期同步",
@@ -1575,12 +1547,12 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "PWM 溢出中断触发 -> unitlib_main_high_loop -> 依次调度 axis1_high / axis2_high -> 硬件更新",
           "lineByLine": [
             {
-              "lines": "70-96",
+              "lines": "70-94",
               "desc": "针对各个电机轴的独立高频执行子程序 unitlib_main_high_loop_one ~ six。"
             },
             {
-              "lines": "98-112",
-              "desc": "主调度入口函数，遍历使能的多轴电机，触发电流内环的高速计算。"
+              "lines": "98-100",
+              "desc": "单轴控制模式下的统一高频控制环入口 unitlib_main_high_loop。"
             }
           ],
           "pitfalls": [
@@ -1596,7 +1568,7 @@ window.WALKTHROUGH_DATA = {
           "id": "main_low_loop",
           "title": "unitlib_main_low_loop() 速度/位置外环与遥测数据慢速采集",
           "startLine": 114,
-          "endLine": 138,
+          "endLine": 134,
           "category": "fsm",
           "categoryName": "外环控制",
           "tag": "低频多任务 / 慢速外环",
@@ -1604,12 +1576,12 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "1ms 慢速定时触发 -> 更新各轴低频速度/位置控制环 -> 采集母线电压与温度 -> 打包发送波形",
           "lineByLine": [
             {
-              "lines": "114-125",
-              "desc": "遍历各个激活轴，调用对应电机的低频循环处理函数。"
+              "lines": "114-128",
+              "desc": "打包转矩/速度/位置、母线电压、电流与三处温度遥测参数至 motorstatus.data。"
             },
             {
-              "lines": "126-138",
-              "desc": "刷新传感器物理量慢速测量值，触发状态机外环调节。"
+              "lines": "129-134",
+              "desc": "设定当前控制模式，触发 196 项状态机 motorstatus_loop() 推进。"
             }
           ],
           "pitfalls": [
@@ -1633,12 +1605,12 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "main() 无限循环 -> unitlib_main_main_loop -> 依次检查各轴状态机 -> 故障捕获",
           "lineByLine": [
             {
-              "lines": "140-165",
-              "desc": "多轴状态机大循环分发子例程 unitlib_main_main_loop_one ~ six。"
+              "lines": "140-163",
+              "desc": "多轴后台大循环分发子例程 unitlib_main_main_loop_one ~ six。"
             },
             {
-              "lines": "166-169",
-              "desc": "主状态循环入口，持续驱动状态迁移。"
+              "lines": "167-169",
+              "desc": "单轴模式后台主循环执行体 unitlib_main_main_loop。"
             }
           ],
           "pitfalls": [
@@ -1669,7 +1641,7 @@ window.WALKTHROUGH_DATA = {
           "id": "encoder_spi",
           "title": "userdata_driver_read_encoder() 绝对值磁编码器 SPI 读取与标幺归一化",
           "startLine": 21,
-          "endLine": 54,
+          "endLine": 47,
           "category": "hardware",
           "categoryName": "硬件抽象",
           "tag": "SPI 编码器 / AS5047P / MT6835",
@@ -1677,16 +1649,16 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "拉低 CS 片选 -> 发送读角指令帧 -> 接收 16 位角度数据 -> 校验 Parity 位 -> 扣除机械偏置 -> 归一化为浮点/定点角度",
           "lineByLine": [
             {
-              "lines": "21-32",
-              "desc": "判断电机编号，触发对应 SPI 片选并读取原始二进制字。"
+              "lines": "21-26",
+              "desc": "读取电机 1 编码器数据 (SPI 原始数据或正交脉冲计数并转弧度)。"
             },
             {
-              "lines": "33-44",
-              "desc": "屏蔽状态与校验位，提取有效角度高位 (如 14 位有效值 `data & 0x3FFF`)。"
+              "lines": "27-42",
+              "desc": "多轴分支支持 (电机 2 ~ 6)。"
             },
             {
-              "lines": "45-54",
-              "desc": "乘以 `(2*PI) / 16384.0f` 转换为连续弧度，返回系统核心。"
+              "lines": "43-47",
+              "desc": "边界保护并返回当前角度原始值。"
             }
           ],
           "math": [
@@ -1708,7 +1680,7 @@ window.WALKTHROUGH_DATA = {
           "id": "hall_sensor",
           "title": "userdata_driver_read_hall() 霍尔传感器 GPIO 引脚状态机扫描",
           "startLine": 56,
-          "endLine": 146,
+          "endLine": 138,
           "category": "hardware",
           "categoryName": "硬件抽象",
           "tag": "霍尔传感器 / 六状态换向",
@@ -1716,16 +1688,16 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "读取 Hall U/V/W 输入引脚 -> 拼接成 uint8_t 状态码 -> 校验有效范围 [1..6] -> 输出粗略电气角度",
           "lineByLine": [
             {
-              "lines": "56-85",
-              "desc": "读取各相 GPIO 电平，进行数字滤波抗开关火花干扰。"
+              "lines": "56-74",
+              "desc": "电机 1 读取 A、B、C 三相霍尔引脚 GPIO 电平。"
             },
             {
-              "lines": "86-120",
-              "desc": "根据 120 度安装角规范将状态码转换为 6 步换向角度基准。"
+              "lines": "75-134",
+              "desc": "多轴模式 (电机 2 ~ 6) 霍尔引脚电平扫描。"
             },
             {
-              "lines": "121-146",
-              "desc": "若读出非法状态码 0 或 7，触发霍尔断线或硬件损坏告警。"
+              "lines": "135-138",
+              "desc": "状态汇总并返回霍尔引脚电平编码。"
             }
           ],
           "pitfalls": [
@@ -1741,7 +1713,7 @@ window.WALKTHROUGH_DATA = {
           "id": "iabc_sampling",
           "title": "userdata_driver_read_iabc() 三相低侧检流电阻注入采样与零偏扣除",
           "startLine": 148,
-          "endLine": 236,
+          "endLine": 230,
           "category": "hardware",
           "categoryName": "硬件抽象",
           "tag": "相电流采样 / ADC 注入组",
@@ -1749,16 +1721,16 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "下桥臂全部导通瞬间 -> 定时器 TRGO 触发 ADC 注入采样 -> 读取 ADC 原始寄存器 -> 减去零漂 offset -> 转换为实际电流",
           "lineByLine": [
             {
-              "lines": "148-185",
-              "desc": "读取 A、B、C 三相注入数据寄存器 (ADC_JDRx) 原始值。"
+              "lines": "148-166",
+              "desc": "电机 1 读取 U、V、W 三相注入 ADC 转换结果原始值 (如 ADC_JDRx)。"
             },
             {
-              "lines": "186-215",
-              "desc": "扣除系统启动阶段存储的静态基准零偏 `offset_iabc`。"
+              "lines": "167-226",
+              "desc": "多轴模式 (电机 2 ~ 6) 三相电流采样。"
             },
             {
-              "lines": "216-236",
-              "desc": "乘以工程转换因子 `Vref / (4096 * Rshunt * Gain)` 输出真实相电流值。"
+              "lines": "227-230",
+              "desc": "返回 ADC 采样原始值。"
             }
           ],
           "math": [
@@ -1780,7 +1752,7 @@ window.WALKTHROUGH_DATA = {
           "id": "vbus_and_temp",
           "title": "userdata_driver_read_vbus() / read_temp_*() 母线电压与 NTC 热敏电阻采样",
           "startLine": 238,
-          "endLine": 373,
+          "endLine": 368,
           "category": "hardware",
           "categoryName": "硬件抽象",
           "tag": "母线电压 / NTC 查表测温",
@@ -1788,16 +1760,16 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "常规 ADC 规则通道轮询 -> 分压比换算为母线真实电压 -> NTC 分压比计算电阻 -> 查表或公式获得摄氏度",
           "lineByLine": [
             {
-              "lines": "238-264",
-              "desc": "read_vbus：按分压电阻比例 (如 10k / 100k) 换算并做低通滤波，输出母线电压。"
+              "lines": "238-258",
+              "desc": "read_vbus：直流母线供电电压采样与换算。"
             },
             {
-              "lines": "266-292",
-              "desc": "read_ibus：总线电流检测，用于整机功耗监控与过载保护。"
+              "lines": "261-286",
+              "desc": "read_ibus：直流母线总输入电流采样，服务于过载与即时过流判定。"
             },
             {
-              "lines": "294-373",
-              "desc": "read_temp_motor / driver / pcb：三通道温度采集，为状态机过热保护提供依据。"
+              "lines": "289-368",
+              "desc": "read_temp_motor / driver / pcb：电机线圈、功率驱动管与控制板 PCB 三点温度采样。"
             }
           ],
           "pitfalls": [
@@ -1813,7 +1785,7 @@ window.WALKTHROUGH_DATA = {
           "id": "pwm_output",
           "title": "userdata_driver_set_pwm() 三相中央对齐互补 PWM 占空比寄存器写入",
           "startLine": 391,
-          "endLine": 422,
+          "endLine": 417,
           "category": "hardware",
           "categoryName": "硬件驱动",
           "tag": "高级定时器 / 互补输出带死区",
@@ -1821,16 +1793,16 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "接收标幺占空比 da, db, dc -> 乘以定时器周期上限 ARR -> 钳位至 [0..ARR] -> 写入 TIMx->CCRx 寄存器",
           "lineByLine": [
             {
-              "lines": "391-404",
-              "desc": "获取对应电机的定时器句柄，做占空比输入越界边界安全钳位。"
+              "lines": "391-398",
+              "desc": "电机 1 写入硬件定时器比较寄存器 (如 TIM1->CCR1~3)。"
             },
             {
-              "lines": "405-416",
-              "desc": "计算计数值 `ccr = duty * arr`，通过预装载寄存器保证三相占空比同步生效。"
+              "lines": "399-414",
+              "desc": "多轴模式 (电机 2 ~ 6) PWM 占空比下发。"
             },
             {
-              "lines": "417-422",
-              "desc": "写入硬件寄存器完成最终的电机定子绕组电压施加。"
+              "lines": "415-417",
+              "desc": "执行完毕返回。"
             }
           ],
           "math": [
@@ -1867,7 +1839,7 @@ window.WALKTHROUGH_DATA = {
           "id": "user_motor_switch",
           "title": "unitlib_usercontrol_motor() 电机启停与使能切换",
           "startLine": 8,
-          "endLine": 17,
+          "endLine": 12,
           "category": "hardware",
           "categoryName": "控制接口",
           "tag": "启停使能 / 安全急停",
@@ -1876,11 +1848,7 @@ window.WALKTHROUGH_DATA = {
           "lineByLine": [
             {
               "lines": "8-12",
-              "desc": "接收浮点使能信号，判断是使能还是急停动作。"
-            },
-            {
-              "lines": "13-17",
-              "desc": "更新电机的 run_flag 运行标志，联动有限状态机切换。"
+              "desc": "接收使能/停机浮点指令，更新 run_flag 联动状态机。"
             }
           ],
           "pitfalls": [
@@ -1896,7 +1864,7 @@ window.WALKTHROUGH_DATA = {
           "id": "user_speed_pos",
           "title": "unitlib_usercontrol_speed() / position() 速度外环与位置外环目标给定",
           "startLine": 19,
-          "endLine": 37,
+          "endLine": 32,
           "category": "algorithm",
           "categoryName": "控制接口",
           "tag": "目标设定 / 运动规划",
@@ -1904,12 +1872,12 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "设定 speed_target / pos_target -> 速度规划器插值 -> 慢速控制环低通跟踪",
           "lineByLine": [
             {
-              "lines": "19-27",
-              "desc": "设置目标速度值并切换为速度控制模式。"
+              "lines": "19-22",
+              "desc": "speed 速度外环给定目标转速 (target_speed)。"
             },
             {
-              "lines": "29-37",
-              "desc": "设置目标物理位置角度并切换为位置控制模式。"
+              "lines": "29-32",
+              "desc": "position 位置外环给定目标角度 (target_pos)。"
             }
           ],
           "pitfalls": [
@@ -1925,7 +1893,7 @@ window.WALKTHROUGH_DATA = {
           "id": "user_current_dq",
           "title": "unitlib_usercontrol_id() / iq() d 轴弱磁与 q 轴转矩电流目标给定",
           "startLine": 39,
-          "endLine": 57,
+          "endLine": 52,
           "category": "algorithm",
           "categoryName": "控制接口",
           "tag": "电流环给定 / 力矩模式",
@@ -1933,12 +1901,12 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "设定 Iq_ref 与 Id_ref -> 直达高频电流环 -> 产生直接受控的安培力矩",
           "lineByLine": [
             {
-              "lines": "39-47",
-              "desc": "设置 d 轴电流 target_id，通常为 0，高速时可注入负值以削弱转子永磁体磁链。"
+              "lines": "39-42",
+              "desc": "id d 轴弱磁电流给定 (target_id)。"
             },
             {
-              "lines": "48-57",
-              "desc": "设置 q 轴电流 target_iq，直接正比于电机输出机械扭矩。"
+              "lines": "49-52",
+              "desc": "iq q 轴转矩电流给定 (target_iq)。"
             }
           ],
           "math": [
@@ -1968,12 +1936,12 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "设定固定 Ud / Uq -> 反 Park 变换 -> 驱动电机以固定电压旋转 -> 验证相序与电流反馈",
           "lineByLine": [
             {
-              "lines": "59-67",
-              "desc": "直接给定 d 轴固定电压 Ud。"
+              "lines": "59-62",
+              "desc": "ud d 轴开环直流电压给定 (用于零位吸合对齐)。"
             },
             {
-              "lines": "68-72",
-              "desc": "直接给定 q 轴固定电压 Uq。"
+              "lines": "69-72",
+              "desc": "uq q 轴开环电压给定 (用于无编码器强拖测试)。"
             }
           ],
           "pitfalls": [
@@ -2004,7 +1972,7 @@ window.WALKTHROUGH_DATA = {
           "id": "run_states_loop",
           "title": "unitlib_status_standby_loop() & ready_loop() 待机安全阻抗与就绪待命",
           "startLine": 7,
-          "endLine": 21,
+          "endLine": 24,
           "category": "fsm",
           "categoryName": "状态执行体",
           "tag": "安全待机 / 就绪巡查",
@@ -2012,12 +1980,16 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "STANDBY 状态持续执行 -> 闭锁下桥臂 -> READY 状态持续执行 -> 准备启动闭环",
           "lineByLine": [
             {
-              "lines": "7-14",
-              "desc": "待机循环体：确保三相 PWM 寄存器保持在零电平安全状态。"
+              "lines": "7-9",
+              "desc": "待机状态 (status_standby) 周期执行动作。"
             },
             {
-              "lines": "15-21",
-              "desc": "就绪循环体：检查电源母线电压是否落在正常启动阈值区间。"
+              "lines": "15-17",
+              "desc": "就绪状态 (status_ready) 周期动作。"
+            },
+            {
+              "lines": "22-24",
+              "desc": "初始化过程状态 (status_initial_loop) 动作。"
             }
           ],
           "pitfalls": [
@@ -2033,7 +2005,7 @@ window.WALKTHROUGH_DATA = {
           "id": "motion_states_loop",
           "title": "unitlib_status_increasing_loop() ~ hold_loop() 加速、减速轨迹与零速保持",
           "startLine": 34,
-          "endLine": 60,
+          "endLine": 52,
           "category": "fsm",
           "categoryName": "运动控制",
           "tag": "加减速平滑 / 主动阻尼",
@@ -2041,16 +2013,16 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "加减速规划器执行斜坡增量 -> 监控目标速度逼近度 -> 到达目标切入保持状态",
           "lineByLine": [
             {
-              "lines": "34-41",
-              "desc": "加速状态：跟踪速度给定斜坡逐步提升转矩，防止急起步冲击。"
+              "lines": "34-36",
+              "desc": "斜坡加速爬坡状态 (status_xxx_increasing)。"
             },
             {
-              "lines": "42-49",
-              "desc": "减速状态：平缓衰减转速，防止制动母线过压倒灌。"
+              "lines": "42-44",
+              "desc": "减速下坡状态 (status_xxx_decreasing)。"
             },
             {
-              "lines": "50-60",
-              "desc": "保持状态：启动抗扰位置锁定，提供类似机械制动器的抗扭刚度。"
+              "lines": "50-52",
+              "desc": "到达稳态伺服保持状态 (status_xxx_hold)。"
             }
           ],
           "pitfalls": [
@@ -2066,7 +2038,7 @@ window.WALKTHROUGH_DATA = {
           "id": "fault_states_loop",
           "title": "unitlib_status_overvoltage_loop() ~ overcurrent_loop() 母线压降与硬件过流保护",
           "startLine": 62,
-          "endLine": 84,
+          "endLine": 122,
           "category": "protection",
           "categoryName": "故障保护",
           "tag": "硬件保护 / 硬件熔断",
@@ -2074,16 +2046,20 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "检测到严重超限 -> 立即关闭定时器主输出 (MOE=0) -> 记录故障时长 -> 达到安全冷却时间允许复位",
           "lineByLine": [
             {
-              "lines": "62-69",
-              "desc": "过压保护循环：监控母线电压泄放趋势。"
+              "lines": "62-64",
+              "desc": "过压保护动作 (切断 PWM，开启制动泄放)。"
             },
             {
-              "lines": "70-77",
-              "desc": "欠压保护循环：防止电源带载塌陷损坏电池。"
+              "lines": "70-72",
+              "desc": "欠压保护动作 (关断功率管，记录电池电量耗尽)。"
             },
             {
-              "lines": "78-84",
-              "desc": "过流保护循环：硬件级紧急关断，锁定故障代码。"
+              "lines": "78-80",
+              "desc": "极限过流保护动作 (硬件级紧急封锁 PWM)。"
+            },
+            {
+              "lines": "85-122",
+              "desc": "电机、驱动管与控制板多路超温/过冷温控保护。"
             }
           ],
           "pitfalls": [
@@ -2107,12 +2083,16 @@ window.WALKTHROUGH_DATA = {
           "pipeline": "堵转/缺相计时超限 -> 关闭输出 -> 发出特定节奏报警 -> 保护定子线包",
           "lineByLine": [
             {
-              "lines": "128-135",
-              "desc": "堵转循环体：维持电机安全停机，并向通信总线持续上报堵转报警。"
+              "lines": "128-130",
+              "desc": "堵转保护动作 (持续超时停机防牙箱打齿或线圈烧毁)。"
             },
             {
-              "lines": "136-145",
-              "desc": "缺相循环体：指示接线异常相线，协助排查硬件线束松动。"
+              "lines": "136-138",
+              "desc": "缺相保护动作 (切断 PWM，上报相线开路)。"
+            },
+            {
+              "lines": "143-145",
+              "desc": "通用严重故障 (status_fault) 紧急自锁。"
             }
           ],
           "pitfalls": [

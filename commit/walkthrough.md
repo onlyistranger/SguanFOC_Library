@@ -74,11 +74,11 @@ timeline
 
 ## 四、核心算法与源码速查索引
 
-* **多电机 X-Macro 元编程**：[`SguanFOC.c#L46-L75`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/SguanFOC.c)
-* **512 点快速正弦与 91 点插值反正切**：[`Sguan_math.c#L9-L88`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_math.c)
-* **Q31 / Q15 跨基准饱和加减乘除**：[`Sguan_IQmath.c#L16-L145`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_IQmath.c)
-* **一至五阶双线性离散化传递函数引擎**：[`Sguan_Transfer.c#L15-L345`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_Transfer.c)
-* **消除机械共振的陷波滤波器 (Nf)**：[`Sguan_Transfer.c#L1187-L1250`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_Transfer.c)
-* **196 项有限状态机转移表与多重故障保护**：[`Sguan_MotorStatus.c#L104-L855`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_MotorStatus.c)
-* **DJB2 极速字符串哈希串口协议**：[`Sguan_printf.c#L18-L97`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_printf.c)
-* **硬件抽象与三相定时器 PWM 写入**：[`UserData_Driver.c#L47-L500`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/UserData_Driver.c)
+* **多电机 X-Macro 元编程**：[`SguanFOC.c#L15-L69`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/SguanFOC.c)
+* **512 点快速正弦与 91 点插值反正切**：[`Sguan_math.c#L7-L214`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_math.c)
+* **Q31 / Q15 跨基准饱和加减乘除**：[`Sguan_IQmath.c#L27-L177`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_IQmath.c)
+* **一至五阶双线性离散化传递函数引擎**：[`Sguan_Transfer.c#L15-L347`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_Transfer.c)
+* **消除机械共振的陷波滤波器 (Nf)**：[`Sguan_Transfer.c#L1187-L1247`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_Transfer.c)
+* **196 项有限状态机转移表与多重故障保护**：[`Sguan_MotorStatus.c#L104-L866`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_MotorStatus.c)
+* **DJB2 极速字符串哈希串口协议**：[`Sguan_printf.c#L27-L126`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_printf.c)
+* **硬件抽象与三相定时器 PWM 写入**：[`UserData_Driver.c#L21-L417`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/UserData_Driver.c)
