@@ -213,8 +213,10 @@ void unitlib_main_goinit0_angle_init(SguanFoc *sguan) {
    $$K_p = L_s \cdot \omega_c$$
    $$K_i = \frac{R_s}{L_s}$$
    其中 $L_s$ 为相电感，$R_s$ 为相电阻，$\omega_c$ 为期望电流环带宽（通常取电流采样周期的 $1/10$，如 $2\pi \times 1000\text{ rad/s}$）。
+
 2. **阶跃测试**：通过上位机串口发送 `Iq=1.0?`（给定期望 $1\text{A}$ 电流），在 JustFloat 示波器上观察 $i_q$ 的上升时间与超调量。
-3. **波形评估**：
+
+3. **波形评估**：  
    * 若超调超过 $15\%$ 甚至产生高频啸叫：减小 $K_p$ 或调小 $K_i$；
    * 若上升时间过缓、动态迟滞：适当增大 $K_p$。
 
@@ -225,10 +227,15 @@ void unitlib_main_goinit0_angle_init(SguanFoc *sguan) {
 ### 1. 串级架构工作流
 
 速度环作为外环，输入目标转速与编码器反馈转速之差，输出作为电流环的输入参考量 $I_q^*$。
-```
-目标速度 ω* ──(+)──> [速度 PID / LADRC] ──> 目标 Iq* ──> [电流内环] ──> SVPWM ──> 电机
-              ▲ -
-              └────── 速度反馈 ω ◄── [编码器测速]
+```mermaid
+flowchart LR
+    RefSpd["目标速度 ω*"] --> SumNode((+))
+    SumNode --> SpdCtrl["速度控制器<br/>(PID / LADRC)"]
+    SpdCtrl -->|"目标电流 Iq*"| CurLoop["电流内环<br/>(Id, Iq 闭环)"]
+    CurLoop --> SVPWM["SVPWM 空间矢量调制"]
+    SVPWM --> Motor["无刷电机"]
+    Motor -.-> EncSpeed["编码器测速"]
+    EncSpeed -->|"实测速度 ω (-)"| SumNode
 ```
 
 ### 2. 调参心法与避坑要点

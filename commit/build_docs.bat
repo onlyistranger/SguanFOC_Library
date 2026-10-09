@@ -32,7 +32,7 @@ copy /Y "%COMMIT_DIR%code_walkthrough.html" "%OUTPUT_DIR%\code_walkthrough.html"
 copy /Y "%COMMIT_DIR%walkthrough_data.js" "%OUTPUT_DIR%\walkthrough_data.js" >nul
 
 echo [1/4] Converting foc_code_analysis.md to HTML...
-pandoc -s -N --toc --toc-depth=3 --katex=assets/ -H header.html -B navbar.html -o "%OUTPUT_DIR%\foc_code_analysis.html" foc_code_analysis.md
+pandoc -s --toc --toc-depth=3 --katex=assets/ -H header.html -B navbar.html -o "%OUTPUT_DIR%\foc_code_analysis.html" foc_code_analysis.md
 if errorlevel 1 (
     echo [FAIL] Error converting foc_code_analysis.md
     pause
@@ -40,7 +40,7 @@ if errorlevel 1 (
 )
 
 echo [2/4] Converting source_code_function_guide.md to HTML...
-pandoc -s -N --toc --toc-depth=3 --katex=assets/ -H header.html -B navbar.html -o "%OUTPUT_DIR%\source_code_function_guide.html" source_code_function_guide.md
+pandoc -s --toc --toc-depth=3 --katex=assets/ -H header.html -B navbar.html -o "%OUTPUT_DIR%\source_code_function_guide.html" source_code_function_guide.md
 if errorlevel 1 (
     echo [FAIL] Error converting source_code_function_guide.md
     pause
@@ -48,7 +48,7 @@ if errorlevel 1 (
 )
 
 echo [3/4] Converting beginner_sbs_guide.md to HTML...
-pandoc -s -N --toc --toc-depth=3 --katex=assets/ -H header.html -B navbar.html -o "%OUTPUT_DIR%\beginner_sbs_guide.html" beginner_sbs_guide.md
+pandoc -s --toc --toc-depth=3 --katex=assets/ -H header.html -B navbar.html -o "%OUTPUT_DIR%\beginner_sbs_guide.html" beginner_sbs_guide.md
 if errorlevel 1 (
     echo [FAIL] Error converting beginner_sbs_guide.md
     pause
@@ -56,7 +56,7 @@ if errorlevel 1 (
 )
 
 echo [4/5] Converting dual_motor_gimbal_guide.md to HTML...
-pandoc -s -N --toc --toc-depth=3 --katex=assets/ -H header.html -B navbar.html -o "%OUTPUT_DIR%\dual_motor_gimbal_guide.html" dual_motor_gimbal_guide.md
+pandoc -s --toc --toc-depth=3 --katex=assets/ -H header.html -B navbar.html -o "%OUTPUT_DIR%\dual_motor_gimbal_guide.html" dual_motor_gimbal_guide.md
 if errorlevel 1 (
     echo [FAIL] Error converting dual_motor_gimbal_guide.md
     pause
@@ -64,7 +64,7 @@ if errorlevel 1 (
 )
 
 echo [5/5] Converting walkthrough.md to HTML...
-pandoc -s -N --toc --toc-depth=3 --katex=assets/ -H header.html -B navbar.html -o "%OUTPUT_DIR%\walkthrough.html" walkthrough.md
+pandoc -s --toc --toc-depth=3 --katex=assets/ -H header.html -B navbar.html -o "%OUTPUT_DIR%\walkthrough.html" walkthrough.md
 if errorlevel 1 (
     echo [FAIL] Error converting walkthrough.md
     pause

@@ -59,6 +59,7 @@ title: "SguanFOC v4.0.0 核心源码函数级逐行深度解析教学指南"
   }
   ```
   通过 X-Macro，使每个电机实例拥有固定的入口函数，方便直接挂载到不同硬件定时器中断向量（如 TIM1 挂电机0，TIM8 挂电机1）。
+
 * **上下游关系**：直接被硬件定时器中断服务函数 (ISR) 或 RTOS 任务周期性调用。
 
 #### (2) `sguanfoc_high_loop(SguanFoc *sguan)`
@@ -98,6 +99,7 @@ title: "SguanFOC v4.0.0 核心源码函数级逐行深度解析教学指南"
 * **源码位置**：[`Sguan_math.c#L103-L124`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_math.c)
 * **函数原型**：`float math_sin(float theta)`
 * **算法逻辑**：
+
   1. 周期归一化：通过 `while` 循环将 $\theta$ 限制在 $[0, 2\pi]$ 区间内：
      ```c
      if (theta > VALUE_2PI) theta -= VALUE_2PI;
@@ -128,6 +130,7 @@ title: "SguanFOC v4.0.0 核心源码函数级逐行深度解析教学指南"
 * **源码位置**：[`Sguan_math.c#L188-L214`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_math.c)
 * **函数原型**：`float math_atan(float x)`
 * **算法精妙推导**：
+
   1. NaN 异常拦截：`if (x != x) return x;`
   2. 奇函数性质利用：若 $x < 0$，返回 `-math_atan(-x)`。
   3. 倒数性质扩展定义域：若 $x > 1.0$，利用数学恒等式 $\arctan(x) = \frac{\pi}{2} - \arctan(1/x)$，将任意大正实数压缩到 $[0, 1.0]$ 区间内！
@@ -159,6 +162,7 @@ title: "SguanFOC v4.0.0 核心源码函数级逐行深度解析教学指南"
 #### (3) `iqmath_add` / `iqmath_sub` / `iqmath_mul` / `iqmath_div`
 
 * **饱和保护机制**：
+
   * 加法：若 `a > 0` 且 `b > 0` 但和溢出变负，强制饱和钳位在 `Q31_MAX`；双负同理钳位在 `Q31_MIN`。
   * 乘法：使用 64 位宽临时变量存储 32 位相乘结果，加 $2^{30}$ 四舍五入后右移 31 位 (`(result + (1LL << 30)) >> 31`)。
   * 除法：分子先左移 31 位成为 64 位数再除以分母，内置余数舍入与除以零防崩溃保护。
@@ -186,6 +190,7 @@ title: "SguanFOC v4.0.0 核心源码函数级逐行深度解析教学指南"
   $$b_0 = 2 \cdot num_1 + num_0 T_s, \quad b_1 = -2 \cdot num_1 + num_0 T_s$$
   $$a_0 = 2 \cdot den_1 + den_0 T_s, \quad a_1 = -2 \cdot den_1 + den_0 T_s$$
   $$y[k] = \frac{b_0 u[k] + b_1 u[k-1] - a_1 y[k-1]}{a_0}$$
+
 * **动态重算标志**：`transfer->params.recalculate_total_flag`：当控制周期中采样时间 $T_s$ 或截止频率改变时，置位此标志，`loop` 内部自动更新分母分子系数，实现参数在线热自适应。
 * `Transfer2` 至 `Transfer5`：分别对应二阶至五阶连续系统的差分求解，内部使用 `i[N]` 与 `o[N]` 数组维护历史步长。
 
@@ -215,8 +220,11 @@ title: "SguanFOC v4.0.0 核心源码函数级逐行深度解析教学指南"
 
 * **源码位置**：[`Sguan_Transfer.c#L784-L887`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_Transfer.c)
 * **算法实现**：
+
   * `Lpf1`：$G(s) = \frac{\omega_c}{s + \omega_c}$，经 Tustin 离散化后：
+
     $$a_0 = 2 + T_s \omega_c, \quad a_1 = -2 + T_s \omega_c, \quad b_0 = b_1 = T_s \omega_c$$
+
   * `Lpf2`：标准二阶巴特沃斯低通，阻尼比 $\zeta = \frac{\sqrt{2}}{2}$，特征分母 $s^2 + \sqrt{2}\omega_c s + \omega_c^2$。
 
 #### (2) `transfer_nf_loop(Nf *nf)` (陷波滤波器)
@@ -224,6 +232,7 @@ title: "SguanFOC v4.0.0 核心源码函数级逐行深度解析教学指南"
 * **源码位置**：[`Sguan_Transfer.c#L1199-L1247`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_Transfer.c)
 * **数学传函**：
   $$G(s) = \frac{s^2 + \omega_0^2}{s^2 + 2\zeta \omega_0 s + \omega_0^2}$$
+
 * **实战价值**：当机械臂或云台在某一频率（如 $200\text{Hz}$）发生强烈共振啸叫时，只需将 `nf->params.wo = 2 * PI * 200`，该滤波器在该频点增益骤降为零，彻底切断共振环路。
 
 #### (3) `transfer_sogi_loop(Sogi *sogi)` (二阶广义积分器)
@@ -249,6 +258,7 @@ title: "SguanFOC v4.0.0 核心源码函数级逐行深度解析教学指南"
 ### 1. 状态机构成全景
 
 * **29 种状态 (`HandleStatus`)**：
+
   * 待机停机：`status_standby`
   * 初始化阶段：`status_ready`, `status_initializing`, `status_gotoinit0_angle`, `status_gotoinit1_current`
   * 正常工作模态：`status_idle`, 包含转矩/速度/位置三种控制模式下的三种微状态：增加中 (`increasing`)、减少中 (`decreasing`)、保持中 (`hold`)
@@ -259,6 +269,7 @@ title: "SguanFOC v4.0.0 核心源码函数级逐行深度解析教学指南"
 * **源码位置**：[`Sguan_MotorStatus.c#L470-L866`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_MotorStatus.c)
 * **函数原型**：`void motorstatus_loop(void *sguan)`
 * **执行全流程**：
+
   1. **遍历状态转移表 `motor_tab[196]`**：匹配当前状态 `p->motorstatus.status == motor_tab[i].status_now`；
   2. **事件触发判定**：
      * **过压/欠压**：直接对比 `vbus_real` 与 `vbus_max`/`vbus_min`；
@@ -299,6 +310,7 @@ title: "SguanFOC v4.0.0 核心源码函数级逐行深度解析教学指南"
 
 * **源码位置**：[`Sguan_printf.c#L173-L200`](../SguanFOC库v4.0.0(高度自由模块化foc，终阶)/Sguan_printf.c)
 * **帧格式说明**：
+
   * 指令以键值对传输，例如：`Speed=1500.5?`
   * 自动过滤 `\r`, `\n`, 空格等噪声字符；
   * 遇到终止符 `?` 触发 `printf_adjust()` 执行哈希查表与派发；
