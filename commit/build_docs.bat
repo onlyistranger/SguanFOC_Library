@@ -91,6 +91,7 @@ echo Files:
 echo  - %OUTPUT_DIR%\index.html
 echo  - %OUTPUT_DIR%\code_walkthrough.html
 echo  - %OUTPUT_DIR%\dual_motor_gimbal_guide.html
+echo  - %OUTPUT_DIR%\v467_porting_guide.html
 echo  - %OUTPUT_DIR%\foc_code_analysis.html
 echo  - %OUTPUT_DIR%\source_code_function_guide.html
 echo  - %OUTPUT_DIR%\beginner_sbs_guide.html

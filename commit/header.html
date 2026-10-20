@@ -1,29 +1,125 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<!-- Prevent Theme Flash: Immediately apply saved or system theme -->
+<script>
+  (function() {
+    try {
+      var saved = localStorage.getItem('sguanfoc-docs-theme');
+      var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var theme = saved ? saved : (prefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    } catch (e) {}
+  })();
+</script>
+
 <!-- Mermaid.js: Fully offline, direct SVG rendering without sandbox iframe -->
 <script src="assets/mermaid.min.js"></script>
 
 <style>
+  /* ========================================================================= */
+  /*                  Design System & CSS Variables (Light & Dark)             */
+  /* ========================================================================= */
   :root {
     --primary-color: #0969da;
     --primary-hover: #0550ae;
+    --heading-color: #1f2328;
     --text-color: #1f2328;
+    --text-muted: #57606a;
+    --text-dim: #8c959f;
     --bg-color: #f6f8fa;
     --card-bg: #ffffff;
+    --card-hover: #f3f4f6;
     --border-color: #d0d7de;
+    --border-subtle: #eaeef2;
     --code-bg: #f6f8fa;
+    --code-inline-bg: rgba(175, 184, 193, 0.22);
+    --code-inline-color: #0969da;
+    --code-border: #d0d7de;
+    --table-th-bg: #f6f8fa;
+    --table-tr-alt: #fcfcfc;
+    --toc-bg: #ffffff;
+    --toc-link: #57606a;
+    --toc-link-hover: #0969da;
+    --toc-hover-bg: #f0f3f6;
+    --navbar-bg: #1e293b;
+    --navbar-border: #334155;
+    --navbar-brand: #38bdf8;
+    --navbar-link: #cbd5e1;
+    --navbar-link-hover: rgba(255, 255, 255, 0.15);
+    --navbar-link-active: #ffffff;
+    --mermaid-bg: #ffffff;
+    --copy-btn-bg: #ffffff;
+    --copy-btn-hover: #f3f4f6;
     --sidebar-width: 290px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.08);
+    color-scheme: light;
+  }
+
+  [data-theme="dark"] {
+    --primary-color: #58a6ff;
+    --primary-hover: #79c0ff;
+    --heading-color: #f0f6fc;
+    --text-color: #e6edf3;
+    --text-muted: #8b949e;
+    --text-dim: #6e7681;
+    --bg-color: #0d1117;
+    --card-bg: #161b22;
+    --card-hover: #1f242c;
+    --border-color: #30363d;
+    --border-subtle: #21262d;
+    --code-bg: #0d1117;
+    --code-inline-bg: rgba(110, 118, 129, 0.35);
+    --code-inline-color: #79c0ff;
+    --code-border: #30363d;
+    --table-th-bg: #1c2128;
+    --table-tr-alt: #0f141c;
+    --toc-bg: #161b22;
+    --toc-link: #8b949e;
+    --toc-link-hover: #58a6ff;
+    --toc-hover-bg: #21262d;
+    --navbar-bg: #0b0f19;
+    --navbar-border: #1e293b;
+    --navbar-brand: #38bdf8;
+    --navbar-link: #94a3b8;
+    --navbar-link-hover: rgba(56, 189, 248, 0.15);
+    --navbar-link-active: #38bdf8;
+    --mermaid-bg: #161b22;
+    --copy-btn-bg: #21262d;
+    --copy-btn-hover: #30363d;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.35);
+    --shadow-md: 0 4px 8px rgba(0,0,0,0.45);
+    color-scheme: dark;
+  }
+
+  /* Base Document Resets */
+  html {
+    background-color: var(--bg-color) !important;
+    color: var(--text-color) !important;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
     font-size: 15px;
-    line-height: 1.65;
-    color: var(--text-color);
-    background-color: var(--bg-color);
+    line-height: 1.68;
+    color: var(--text-color) !important;
+    background-color: var(--bg-color) !important;
     margin: 0 !important;
     padding: 0 !important;
     max-width: 100% !important;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  p, li {
+    color: var(--text-color);
+  }
+
+  hr {
+    background-color: var(--border-color) !important;
+    border: none !important;
+    height: 1px !important;
+    margin: 28px 0 !important;
   }
 
   /* Top Navigation Bar */
@@ -34,39 +130,96 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: #1e293b;
+    background: var(--navbar-bg);
     color: #ffffff;
-    padding: 12px 24px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    padding: 10px 24px;
+    border-bottom: 1px solid var(--navbar-border);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+    transition: background 0.2s ease, border-color 0.2s ease;
+    gap: 16px;
   }
 
   .nav-brand {
     font-weight: 700;
-    font-size: 16px;
+    font-size: 15.5px;
     display: flex;
     align-items: center;
     gap: 8px;
-    color: #38bdf8;
+    color: var(--navbar-brand);
+    flex-shrink: 0;
+    white-space: nowrap;
   }
 
   .nav-links {
     display: flex;
-    gap: 12px;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
   }
 
   .nav-links a {
-    color: #cbd5e1;
-    text-decoration: none;
-    font-size: 13.5px;
-    padding: 6px 12px;
+    color: var(--navbar-link) !important;
+    text-decoration: none !important;
+    font-size: 13px;
+    padding: 5px 10px;
     border-radius: 6px;
     transition: all 0.2s ease;
+    white-space: nowrap;
   }
 
-  .nav-links a:hover, .nav-links a.active {
-    color: #ffffff;
-    background: rgba(255, 255, 255, 0.15);
-    text-decoration: none;
+  .nav-links a:hover {
+    color: #ffffff !important;
+    background: var(--navbar-link-hover);
+    text-decoration: none !important;
+  }
+
+  .nav-links a.active {
+    color: #ffffff !important;
+    background: rgba(56, 189, 248, 0.25);
+    font-weight: 600;
+    text-decoration: none !important;
+  }
+
+  .nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  /* Theme Toggle Button */
+  .theme-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    font-size: 12.5px;
+    font-weight: 600;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.12);
+    color: #f1f5f9;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    outline: none;
+  }
+
+  .theme-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.22);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: translateY(-1px);
+  }
+
+  [data-theme="dark"] .theme-toggle-btn {
+    background: rgba(56, 189, 248, 0.12);
+    border-color: rgba(56, 189, 248, 0.35);
+    color: #38bdf8;
+  }
+
+  [data-theme="dark"] .theme-toggle-btn:hover {
+    background: rgba(56, 189, 248, 0.22);
+    border-color: #38bdf8;
   }
 
   /* Main Container Layout */
@@ -84,15 +237,16 @@
     width: var(--sidebar-width);
     flex-shrink: 0;
     position: sticky;
-    top: 75px;
-    max-height: calc(100vh - 100px);
+    top: 72px;
+    max-height: calc(100vh - 96px);
     overflow-y: auto;
-    background: var(--card-bg);
+    background: var(--toc-bg);
     border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 16px;
     font-size: 13px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    box-shadow: var(--shadow-sm);
+    transition: background 0.2s, border-color 0.2s;
   }
 
   #TOC ul {
@@ -106,17 +260,19 @@
   }
 
   #TOC a {
-    color: #57606a;
-    text-decoration: none;
+    color: var(--toc-link) !important;
+    text-decoration: none !important;
     display: block;
-    padding: 3px 6px;
+    padding: 4px 6px;
     border-radius: 4px;
     line-height: 1.4;
+    transition: all 0.15s ease;
   }
 
   #TOC a:hover {
-    color: var(--primary-color);
-    background: #f0f3f6;
+    color: var(--toc-link-hover) !important;
+    background: var(--toc-hover-bg);
+    text-decoration: none !important;
   }
 
   /* Article Content */
@@ -127,69 +283,110 @@
     border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 40px 48px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    box-shadow: var(--shadow-sm);
+    transition: background 0.2s, border-color 0.2s;
   }
 
   /* Headers */
   h1, h2, h3, h4, h5, h6 {
-    color: #1f2328;
+    color: var(--heading-color) !important;
     margin-top: 28px;
     margin-bottom: 14px;
     font-weight: 600;
-    line-height: 1.3;
+    line-height: 1.35;
   }
 
-  h1 { font-size: 26px; border-bottom: 2px solid #eaeef2; padding-bottom: 10px; margin-top: 0; }
-  h2 { font-size: 20px; border-bottom: 1px solid #eaeef2; padding-bottom: 8px; }
+  h1 { font-size: 26px; border-bottom: 2px solid var(--border-subtle); padding-bottom: 10px; margin-top: 0; }
+  h2 { font-size: 20px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px; }
   h3 { font-size: 17px; }
 
   /* Links */
-  a { color: var(--primary-color); text-decoration: none; }
-  a:hover { text-decoration: underline; }
+  a { color: var(--primary-color) !important; text-decoration: none; }
+  a:visited { color: var(--primary-color) !important; }
+  a:hover { color: var(--primary-hover) !important; text-decoration: underline; }
 
   /* Code Block Styling */
-  pre {
-    background-color: #f6f8fa;
-    border: 1px solid #d0d7de;
-    border-radius: 6px;
-    padding: 14px;
+  pre, .sourceCode {
+    background-color: var(--code-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 8px;
+    padding: 14px 16px;
     overflow-x: auto;
-    font-size: 13px;
-    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13.5px;
+    line-height: 1.55;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "JetBrains Mono", monospace;
     position: relative;
+    color: var(--text-color) !important;
   }
 
   code {
-    background-color: rgba(175, 184, 193, 0.2);
-    padding: 2px 5px;
+    background-color: var(--code-inline-bg) !important;
+    color: var(--code-inline-color) !important;
+    padding: 2px 6px;
     border-radius: 4px;
     font-size: 13px;
-    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "JetBrains Mono", monospace;
   }
 
   pre code {
-    background-color: transparent;
-    padding: 0;
+    background-color: transparent !important;
+    padding: 0 !important;
     border-radius: 0;
+    color: inherit !important;
   }
+
+  /* Pandoc Code Syntax Highlighting in Light Mode */
+  code span.kw, code span.cf { color: #cf222e; font-weight: 600; }
+  code span.dt { color: #0550ae; }
+  code span.dv, code span.bn, code span.fl { color: #0550ae; }
+  code span.ch, code span.st { color: #0a3069; }
+  code span.co, code span.cv, code span.do { color: #6e7781; font-style: italic; }
+  code span.fu { color: #8250df; font-weight: 600; }
+  code span.im { color: #cf222e; font-weight: 600; }
+  code span.pp { color: #953800; font-weight: 600; }
+  code span.op { color: #24292f; }
+
+  /* Pandoc Code Syntax Highlighting in Dark Mode */
+  [data-theme="dark"] code span.kw,
+  [data-theme="dark"] code span.cf { color: #ff7b72 !important; font-weight: 600; }
+  [data-theme="dark"] code span.dt { color: #79c0ff !important; }
+  [data-theme="dark"] code span.dv,
+  [data-theme="dark"] code span.bn,
+  [data-theme="dark"] code span.fl { color: #79c0ff !important; }
+  [data-theme="dark"] code span.ch,
+  [data-theme="dark"] code span.st { color: #a5d6ff !important; }
+  [data-theme="dark"] code span.co,
+  [data-theme="dark"] code span.cv,
+  [data-theme="dark"] code span.do { color: #8b949e !important; font-style: italic; }
+  [data-theme="dark"] code span.fu { color: #d2a8ff !important; font-weight: 600; }
+  [data-theme="dark"] code span.im { color: #ff7b72 !important; font-weight: 600; }
+  [data-theme="dark"] code span.pp { color: #ffa657 !important; font-weight: 600; }
+  [data-theme="dark"] code span.op { color: #79c0ff !important; }
+  [data-theme="dark"] code span.ot { color: #ffa657 !important; }
+  [data-theme="dark"] code span.al { color: #ffa198 !important; font-weight: bold; }
+  [data-theme="dark"] code span.cn { color: #79c0ff !important; }
+  [data-theme="dark"] code span.at { color: #79c0ff !important; }
+  [data-theme="dark"] code span.bu { color: #7ee787 !important; }
+  [data-theme="dark"] code span.sc { color: #a5d6ff !important; }
 
   /* Copy Code Button */
   .copy-btn {
     position: absolute;
     top: 6px;
     right: 6px;
-    font-size: 11px;
-    background: #ffffff;
-    border: 1px solid #d0d7de;
+    font-size: 11.5px;
+    font-weight: 500;
+    background: var(--copy-btn-bg);
+    border: 1px solid var(--border-color);
     border-radius: 4px;
-    padding: 3px 8px;
+    padding: 3px 9px;
     cursor: pointer;
-    color: #57606a;
-    transition: all 0.2s;
+    color: var(--text-muted);
+    transition: all 0.2s ease;
   }
 
   .copy-btn:hover {
-    background: #f3f4f6;
+    background: var(--copy-btn-hover);
     color: var(--primary-color);
   }
 
@@ -199,30 +396,39 @@
     width: 100%;
     margin: 18px 0;
     font-size: 14px;
+    color: var(--text-color);
   }
 
   table th, table td {
-    border: 1px solid #d0d7de;
-    padding: 8px 12px;
+    border: 1px solid var(--border-color) !important;
+    padding: 10px 14px;
     text-align: left;
+    color: var(--text-color) !important;
   }
 
   table th {
-    background-color: #f6f8fa;
+    background-color: var(--table-th-bg) !important;
+    color: var(--heading-color) !important;
     font-weight: 600;
   }
 
   table tr:nth-child(2n) {
-    background-color: #fcfcfc;
+    background-color: var(--table-tr-alt) !important;
   }
 
-  /* Alert Callout Boxes */
+  tbody {
+    border: none !important;
+  }
+
+  /* Alert Callout Boxes - Light Mode */
   .alert-box {
     border-left: 4px solid #0969da;
-    border-radius: 0 6px 6px 0;
-    padding: 12px 16px;
-    margin: 16px 0;
-    background: #f6f8fa;
+    border-radius: 0 8px 8px 0;
+    padding: 12px 18px;
+    margin: 18px 0;
+    background: var(--bg-color);
+    color: var(--text-color);
+    box-shadow: var(--shadow-sm);
   }
 
   .alert-box.alert-note { border-left-color: #0969da; background: #ddf4ff; }
@@ -231,9 +437,28 @@
   .alert-box.alert-warning { border-left-color: #9a6700; background: #fff8c5; }
   .alert-box.alert-caution { border-left-color: #cf222e; background: #ffebe9; }
 
+  .alert-box.alert-note .alert-title { color: #0969da; }
+  .alert-box.alert-tip .alert-title { color: #1a7f37; }
+  .alert-box.alert-important .alert-title { color: #8250df; }
+  .alert-box.alert-warning .alert-title { color: #9a6700; }
+  .alert-box.alert-caution .alert-title { color: #cf222e; }
+
+  /* Alert Callout Boxes - Dark Mode */
+  [data-theme="dark"] .alert-box.alert-note { border-left-color: #388bfd; background: rgba(56, 139, 253, 0.12); color: #e6edf3; }
+  [data-theme="dark"] .alert-box.alert-tip { border-left-color: #3fb950; background: rgba(63, 185, 80, 0.12); color: #e6edf3; }
+  [data-theme="dark"] .alert-box.alert-important { border-left-color: #a371f7; background: rgba(163, 113, 247, 0.12); color: #e6edf3; }
+  [data-theme="dark"] .alert-box.alert-warning { border-left-color: #d29922; background: rgba(210, 153, 34, 0.12); color: #e6edf3; }
+  [data-theme="dark"] .alert-box.alert-caution { border-left-color: #f85149; background: rgba(248, 81, 73, 0.12); color: #e6edf3; }
+
+  [data-theme="dark"] .alert-box.alert-note .alert-title { color: #58a6ff; }
+  [data-theme="dark"] .alert-box.alert-tip .alert-title { color: #3fb950; }
+  [data-theme="dark"] .alert-box.alert-important .alert-title { color: #bc8cff; }
+  [data-theme="dark"] .alert-box.alert-warning .alert-title { color: #d29922; }
+  [data-theme="dark"] .alert-box.alert-caution .alert-title { color: #ff7b72; }
+
   .alert-title {
     font-weight: 700;
-    font-size: 13px;
+    font-size: 13.5px;
     margin-bottom: 6px;
     display: flex;
     align-items: center;
@@ -243,72 +468,116 @@
   /* Mermaid Diagram Container */
   .mermaid {
     text-align: center;
-    background: #ffffff;
+    background: var(--mermaid-bg);
     padding: 16px;
     margin: 18px 0;
-    border: 1px solid #e1e4e8;
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     overflow-x: auto;
+    transition: background 0.2s, border-color 0.2s;
+  }
+
+  /* KaTeX Math Styling in Dark & Light Modes */
+  .katex, .katex-display {
+    color: var(--text-color) !important;
   }
 
   /* Responsive Design */
   @media (max-width: 900px) {
-    .doc-container { flex-direction: column; }
+    .doc-container { flex-direction: column; padding: 16px; }
     #TOC { width: 100%; position: static; max-height: none; }
     .doc-content { padding: 20px; }
+    .top-navbar { flex-direction: column; align-items: stretch; gap: 10px; }
+    .nav-actions { align-self: flex-end; }
   }
 </style>
 
 <script>
-// Configure Mermaid before DOM load to avoid iframe sandboxing under file:/// protocol
-if (typeof mermaid !== "undefined") {
-  mermaid.initialize({
-    startOnLoad: false,
-    securityLevel: 'loose',
-    theme: 'default'
-  });
+// Mermaid dynamic theme initialization
+function renderMermaidGraphs(theme) {
+  if (typeof mermaid === "undefined") return;
+  try {
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: 'loose',
+      theme: theme === 'dark' ? 'dark' : 'default'
+    });
+    document.querySelectorAll(".mermaid").forEach(function(el) {
+      if (el.dataset.mermaidCode) {
+        el.removeAttribute("data-processed");
+        el.innerHTML = el.dataset.mermaidCode;
+      }
+    });
+    mermaid.run();
+  } catch (e) {
+    console.warn("Mermaid execution catch:", e);
+  }
 }
 
 document.addEventListener("DOMContentLoaded", function() {
-  // 1. Transform mermaid code blocks to direct divs
+  var currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+
+  // 1. Setup Theme Toggle Button
+  var toggleBtn = document.getElementById("themeToggleBtn");
+  function updateToggleBtn(theme) {
+    if (!toggleBtn) return;
+    var icon = toggleBtn.querySelector(".theme-icon");
+    var text = toggleBtn.querySelector(".theme-text");
+    if (theme === "dark") {
+      if (icon) icon.textContent = "🌙";
+      if (text) text.textContent = "深色";
+      toggleBtn.title = "当前为深色模式，点击切换为浅色";
+    } else {
+      if (icon) icon.textContent = "☀️";
+      if (text) text.textContent = "浅色";
+      toggleBtn.title = "当前为浅色模式，点击切换为深色";
+    }
+  }
+  updateToggleBtn(currentTheme);
+
+  if (toggleBtn) {
+    toggleBtn.addEventListener("click", function() {
+      var activeTheme = document.documentElement.getAttribute('data-theme') || 'light';
+      var newTheme = activeTheme === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', newTheme);
+      try {
+        localStorage.setItem('sguanfoc-docs-theme', newTheme);
+      } catch (e) {}
+      updateToggleBtn(newTheme);
+      renderMermaidGraphs(newTheme);
+    });
+  }
+
+  // 2. Transform mermaid code blocks to direct divs and store raw code for dynamic re-theme
   document.querySelectorAll("pre.mermaid, pre.sourceCode.mermaid, pre > code.language-mermaid").forEach(function(el) {
-    let pre = el.tagName === "CODE" ? el.parentElement : el;
+    var pre = el.tagName === "CODE" ? el.parentElement : el;
     if (!pre || pre.dataset.mermaidProcessed) return;
     pre.dataset.mermaidProcessed = "true";
-    let graphDef = pre.textContent;
-    let div = document.createElement("div");
+    var graphDef = pre.textContent;
+    var div = document.createElement("div");
     div.className = "mermaid";
+    div.dataset.mermaidCode = graphDef;
     div.textContent = graphDef;
     pre.replaceWith(div);
   });
 
-  if (typeof mermaid !== "undefined") {
-    try {
-      let promise = mermaid.run();
-      if (promise && typeof promise.catch === "function") {
-        promise.catch(function(err) {
-          console.warn("Mermaid safe catch:", err);
-        });
-      }
-    } catch(e) {
-      console.warn("Mermaid synchronous catch:", e);
-    }
-  }
+  renderMermaidGraphs(currentTheme);
 
   // 3. Transform GitHub Alert Blockquotes into styled Callout boxes
   document.querySelectorAll("blockquote").forEach(function(bq) {
-    let html = bq.innerHTML;
-    const alerts = [
+    var html = bq.innerHTML;
+    var alerts = [
       { tag: "[!NOTE]", class: "alert-note", title: "说明 / NOTE", icon: "ℹ️" },
       { tag: "[!TIP]", class: "alert-tip", title: "实战建议 / TIP", icon: "💡" },
       { tag: "[!IMPORTANT]", class: "alert-important", title: "关键重点 / IMPORTANT", icon: "📌" },
       { tag: "[!WARNING]", class: "alert-warning", title: "注意事项 / WARNING", icon: "⚠️" },
       { tag: "[!CAUTION]", class: "alert-caution", title: "避坑警示 / CAUTION", icon: "🛑" }
     ];
-    for (let a of alerts) {
-      if (html.includes(a.tag)) {
+    for (var i = 0; i < alerts.length; i++) {
+      var a = alerts[i];
+      if (html.indexOf(a.tag) !== -1) {
         bq.className = "alert-box " + a.class;
-        bq.innerHTML = html.replace(a.tag, `<div class="alert-title">${a.icon} ${a.title}</div>`);
+        bq.innerHTML = html.replace(a.tag, '<div class="alert-title">' + a.icon + ' ' + a.title + '</div>');
         break;
       }
     }
@@ -317,13 +586,13 @@ document.addEventListener("DOMContentLoaded", function() {
   // 4. Add Copy Button to Pre Code blocks
   document.querySelectorAll("pre").forEach(function(pre) {
     if (pre.classList.contains("mermaid")) return;
-    let btn = document.createElement("button");
+    var btn = document.createElement("button");
     btn.className = "copy-btn";
     btn.innerText = "复制";
     btn.onclick = function() {
       navigator.clipboard.writeText(pre.innerText.replace("复制", "").trim()).then(function() {
         btn.innerText = "已复制";
-        setTimeout(() => { btn.innerText = "复制"; }, 2000);
+        setTimeout(function() { btn.innerText = "复制"; }, 2000);
       });
     };
     pre.appendChild(btn);
@@ -331,11 +600,11 @@ document.addEventListener("DOMContentLoaded", function() {
 
   // 5. Automatically rewrite internal .md links to .html for browser navigation
   document.querySelectorAll("a").forEach(function(a) {
-    let href = a.getAttribute("href");
+    var href = a.getAttribute("href");
     if (href && !href.startsWith("http") && !href.startsWith("#") && !href.startsWith("mailto:")) {
       if (href.endsWith(".md")) {
         a.setAttribute("href", href.replace(/\.md$/, ".html"));
-      } else if (href.includes(".md#")) {
+      } else if (href.indexOf(".md#") !== -1) {
         a.setAttribute("href", href.replace(/\.md#/, ".html#"));
       } else if (href.startsWith("../") && !href.startsWith("../../")) {
         a.setAttribute("href", "../" + href);
@@ -344,25 +613,25 @@ document.addEventListener("DOMContentLoaded", function() {
   });
 
   // 6. Highlight active navbar link
-  let currentFile = window.location.pathname.split("/").pop() || "foc_code_analysis.html";
+  var currentFile = window.location.pathname.split("/").pop() || "foc_code_analysis.html";
   document.querySelectorAll(".nav-links a").forEach(function(link) {
-    let target = link.getAttribute("href");
+    var target = link.getAttribute("href");
     if (target === currentFile || (currentFile === "" && target === "foc_code_analysis.html") || (currentFile === "index.html" && target === "foc_code_analysis.html")) {
       link.classList.add("active");
     }
   });
 
   // 7. Wrap TOC and Content into structured container if not already
-  let body = document.body;
-  let toc = document.getElementById("TOC");
+  var body = document.body;
+  var toc = document.getElementById("TOC");
   if (toc) {
-    let container = document.createElement("div");
+    var container = document.createElement("div");
     container.className = "doc-container";
     
-    let content = document.createElement("main");
+    var content = document.createElement("main");
     content.className = "doc-content";
 
-    let children = Array.from(body.children);
+    var children = Array.from(body.children);
     children.forEach(function(child) {
       if (child.id === "TOC" || child.className === "top-navbar" || child.tagName === "SCRIPT" || child.tagName === "STYLE" || child.tagName === "LINK") return;
       content.appendChild(child);

@@ -5,6 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SguanFOC v4.0.0 核心源码逐行剖析交互教学工作台 | 双屏联动精读</title>
   
+  <!-- Prevent Theme Flash: Immediately apply saved or system theme -->
+  <script>
+    (function() {
+      try {
+        var saved = localStorage.getItem('sguanfoc-docs-theme');
+        var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var theme = saved ? saved : (prefersDark ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (e) {}
+    })();
+  </script>
+
   <!-- Offline KaTeX for Mathematical Formulas -->
   <link rel="stylesheet" href="assets/katex.min.css">
   <script src="assets/katex.min.js"></script>
@@ -925,6 +937,9 @@
       <a href="source_code_function_guide.html" class="nav-doc-link" title="返回核心源码函数级逐行深度解析手册">
         🔬 逐行手册
       </a>
+      <a href="v467_porting_guide.html" class="nav-doc-link" title="返回CH32V467移植全景指南">
+        🚀 V467移植
+      </a>
       <a href="foc_code_analysis.html" class="nav-doc-link" title="返回架构与源码全景解析">
         📖 架构全景
       </a>
@@ -1076,7 +1091,8 @@
 
     // Restore shared docs theme preference
     const savedTheme = localStorage.getItem('sguanfoc-docs-theme');
-    state.theme = savedTheme === 'dark' ? 'dark' : 'light';
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    state.theme = savedTheme ? savedTheme : (prefersDark ? 'dark' : 'light');
     document.documentElement.setAttribute('data-theme', state.theme);
     btnThemeToggle.innerText = state.theme === 'dark' ? '🌙 深色' : '☀️ 浅色';
 
@@ -1233,19 +1249,24 @@
       codeScrollContainer.appendChild(frag);
     }
 
-    // Robust, ultra-fast C Language Syntax Highlighter
+    // High-performance single-pass C Language Syntax Highlighter
+    const C_KEYWORDS = new Set(['static', 'const', 'extern', 'volatile', 'struct', 'union', 'enum', 'typedef', 'return', 'if', 'else', 'for', 'while', 'do', 'switch', 'case', 'break', 'continue', 'sizeof', 'true', 'false', 'NULL']);
+    const C_TYPES = new Set(['void', 'int', 'uint32_t', 'uint16_t', 'uint8_t', 'int32_t', 'int16_t', 'int8_t', 'int64_t', 'float', 'double', 'bool', 'size_t', 'char']);
+    const C_ASM = new Set(['__smlaltb', '__smlaltt', '__WFI', 'nop', 'SguanFoc', 'Transfer', 'Clarke', 'Park', 'Ipark', 'Svpwm', 'Pid', 'Lpf1', 'Lpf2', 'Hpf1', 'Bpf1', 'Sogi', 'Nf', 'Smo', 'Hfi', 'Ekf', 'Ladrc1', 'Ladrc2', 'Smc', 'Dpcc', 'Q31', 'Q15', 'SguanQ', 'SguanF', 'Transfer1', 'Transfer2', 'Transfer3']);
+    const C_TOKEN_REGEX = /(".*?"|'.*?'|&lt;[\w\.\/]+&gt;)|(^\s*#\w+)|(\b0x[0-9a-fA-F]+\b|\b\d+(?:\.\d+)?f?\b)|(\b[a-zA-Z_]\w*\b)/gm;
+
     function highlightCLanguage(text) {
       if (!text) return '&nbsp;';
 
       // HTML escape
       let s = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-      // 1. Single-line comments
-      if (s.trim().startsWith('//')) {
+      // 1. Full line comments
+      if (s.trim().startsWith('//') || s.trim().startsWith('/*') || s.trim().startsWith('*')) {
         return `<span class="tok-com">${s}</span>`;
       }
 
-      // Check inline comment
+      // 2. Trailing inline comment
       let inlineComment = '';
       const commentIdx = s.indexOf('//');
       if (commentIdx !== -1) {
@@ -1253,39 +1274,24 @@
         s = s.slice(0, commentIdx);
       }
 
-      // 2. Preprocessor directives (#include, #define, #if, etc.)
-      if (s.trim().startsWith('#')) {
-        s = s.replace(/(#\w+)/, '<span class="tok-macro">$1</span>');
-      }
-
-      // 3. String literals
-      s = s.replace(/(".*?"|'.*?'|&lt;.*?&gt;)/g, '<span class="tok-str">$1</span>');
-
-      // 4. Intrinsics & Custom Types
-      const asmKeywords = ['__smlaltb', '__smlaltt', '__WFI', 'nop', 'SguanFoc', 'Transfer', 'Clarke', 'Park', 'Ipark', 'Svpwm', 'Pid', 'Lpf1', 'Lpf2', 'Hpf1', 'Bpf1', 'Sogi', 'Nf', 'Smo', 'Hfi', 'Ekf', 'Ladrc1', 'Ladrc2', 'Smc', 'Dpcc', 'Q31', 'Q15', 'SguanQ', 'SguanF'];
-      asmKeywords.forEach(kw => {
-        const re = new RegExp(`\\b(${kw})\\b`, 'g');
-        s = s.replace(re, '<span class="tok-asm">$1</span>');
+      // 3. Single-pass non-colliding tokenization
+      C_TOKEN_REGEX.lastIndex = 0;
+      let result = s.replace(C_TOKEN_REGEX, (match, str, macro, num, word, offset) => {
+        if (str) return '<span class="tok-str">' + str + '</span>';
+        if (macro) return '<span class="tok-macro">' + macro + '</span>';
+        if (num) return '<span class="tok-num">' + num + '</span>';
+        if (word) {
+          if (C_KEYWORDS.has(word)) return '<span class="tok-kw">' + word + '</span>';
+          if (C_TYPES.has(word)) return '<span class="tok-type">' + word + '</span>';
+          if (C_ASM.has(word)) return '<span class="tok-asm">' + word + '</span>';
+          const after = s.slice(offset + match.length).trim();
+          if (after.startsWith('(')) return '<span class="tok-func">' + word + '</span>';
+          return word;
+        }
+        return match;
       });
 
-      // 5. Types & Qualifiers
-      const types = ['void', 'int', 'uint32_t', 'uint16_t', 'uint8_t', 'int32_t', 'int16_t', 'int8_t', 'int64_t', 'float', 'double', 'bool', 'size_t', 'char'];
-      types.forEach(t => {
-        const re = new RegExp(`\\b(${t})\\b`, 'g');
-        s = s.replace(re, '<span class="tok-type">$1</span>');
-      });
-
-      // 6. C Keywords
-      const keywords = ['static', 'const', 'extern', 'volatile', 'struct', 'union', 'enum', 'typedef', 'return', 'if', 'else', 'for', 'while', 'do', 'switch', 'case', 'break', 'continue', 'sizeof', 'true', 'false', 'NULL'];
-      keywords.forEach(kw => {
-        const re = new RegExp(`\\b(${kw})\\b`, 'g');
-        s = s.replace(re, '<span class="tok-kw">$1</span>');
-      });
-
-      // 7. Numbers (hex & dec & float)
-      s = s.replace(/\b(0x[0-9a-fA-F]+|\d+\.?\d*f?)\b/g, '<span class="tok-num">$1</span>');
-
-      return s + inlineComment;
+      return result + inlineComment;
     }
 
     // 4. Render Right Walkthrough Cards & LaTeX Math
